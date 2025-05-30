@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Alpha Shooter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background-color: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    #cabinet {
+      position: absolute;
+      top: 0vh;
+      left: 0;
+      right: 0;
+      width: 100vw;
+      height: 55vw;
+      background: url('./images/cabinet.png') no-repeat center center;
+      background-size: 100vw auto;
+    }
+
+    canvas {
+      position: absolute;
+      top: 50%;
+      left: 49%;
+      width: 55vw;
+      height: 60vh;
+      background: rgba(255, 0, 0, 0.3);
+      border: 2px solid lime;
+      z-index: 10;
+      display: block;
+
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="cabinet">
+    <canvas id="gameCanvas" width="560" height="420"></canvas> <!-- REAL pixel size -->
+  </div>
+
+  <script src="js/game.js"></script>
+
+</body>
+</html>
