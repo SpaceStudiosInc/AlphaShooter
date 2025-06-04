@@ -40,7 +40,7 @@ let leftButton, rightButton, shootButton;
 let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 function setup() {
-  createCanvas(800, 600);
+  createCanvas(1000, 800);
   textFont('Press Start 2P');
   
   if (isMobile) {
