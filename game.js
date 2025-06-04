@@ -39,55 +39,146 @@ function preload() {
 let leftButton, rightButton, shootButton;
 let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+let canvas;
+let gameScale = 1;
+let canvasWidth = 1000;
+let canvasHeight = 800;
+
+function calculateCanvasSize() {
+  const maxWidth = window.innerWidth;
+  const maxHeight = window.innerHeight;
+  
+  // Calculate the scale to fit the screen while maintaining aspect ratio
+  const scaleX = maxWidth / canvasWidth;
+  const scaleY = maxHeight / canvasHeight;
+  gameScale = min(scaleX, scaleY) * 0.95; // 95% of the available space to add some padding
+  
+  // Make gameScale available globally for other components
+  window.gameScale = gameScale;
+  
+  // Set the canvas size
+  resizeCanvas(canvasWidth * gameScale, canvasHeight * gameScale, false);
+  
+  // Scale the canvas
+  if (canvas) {
+    canvas.style('width', `${canvasWidth * gameScale}px`);
+    canvas.style('height', `${canvasHeight * gameScale}px`);
+    
+    // Apply CSS transforms for better scaling
+    canvas.elt.style.transform = 'scale(1)';
+    canvas.elt.style.transformOrigin = 'top left';
+  }
+}
+
+function windowResized() {
+  calculateCanvasSize();
+}
+
 function setup() {
-  createCanvas(1000, 800);
+  canvas = createCanvas(canvasWidth, canvasHeight);
   textFont('Press Start 2P');
+  calculateCanvasSize();
   
   if (isMobile) {
     // Create control buttons
     leftButton = createButton('◀');
     rightButton = createButton('▶');
+    rightButton.style('font-size', '24px');
+    leftButton.style('font-size', '24px');
     shootButton = createButton('FIRE');
+    shootButton.style('font-size', '20px');
     
     // Style buttons
     const buttonStyle = {
-      position: 'absolute',
-      width: '80px',
-      height: '80px',
+      position: 'fixed',
+      bottom: '20px',
       fontSize: '24px',
+      padding: '15px 25px',
+      borderRadius: '10px',
       backgroundColor: 'rgba(255, 255, 255, 0.3)',
       border: '2px solid white',
       color: 'white',
-      borderRadius: '50%',
-      userSelect: 'none'
+      fontFamily: 'Press Start 2P',
+      zIndex: 100,
+      touchAction: 'manipulation',
+      userSelect: 'none',
+      WebkitTapHighlightColor: 'transparent'
     };
-    
-    Object.assign(leftButton.elt.style, buttonStyle, { bottom: '20px', left: '20px' });
-    Object.assign(rightButton.elt.style, buttonStyle, { bottom: '20px', left: '120px' });
-    Object.assign(shootButton.elt.style, {
+
+    // Apply base styles
+    leftButton.style(buttonStyle);
+    rightButton.style(buttonStyle);
+    shootButton.style({
       ...buttonStyle,
-      width: '120px',
-      borderRadius: '40px',
-      bottom: '20px',
       right: '20px',
+      bottom: '20px',
+      backgroundColor: 'rgba(255, 50, 50, 0.6)',
+      padding: '15px 20px',
       fontSize: '20px'
     });
+
+    // Position buttons
+    const updateButtonPositions = () => {
+      const buttonBottom = window.innerHeight - 80;
+      const buttonSpacing = 100;
+      
+      leftButton.position(20, buttonBottom);
+      rightButton.position(20 + buttonSpacing, buttonBottom);
+      shootButton.position(window.innerWidth - 150, buttonBottom);
+    };
     
-    // Touch event listeners
-    leftButton.mousePressed(() => player.moveLeft = true);
-    leftButton.mouseReleased(() => player.moveLeft = false);
-    leftButton.touchStart(() => { player.moveLeft = true; return false; });
-    leftButton.touchEnd(() => { player.moveLeft = false; return false; });
+    // Touch event listeners with touch support
+    const handlePress = (button, action) => {
+      button.mousePressed(action);
+      button.elt.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        action();
+      }, { passive: false });
+    };
+
+    const handleRelease = (button, action) => {
+      button.mouseReleased(action);
+      button.elt.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        action();
+      }, { passive: false });
+      button.elt.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        action();
+      }, { passive: false });
+    };
+
+    // Movement controls
+    handlePress(leftButton, () => player.moveLeft = true);
+    handleRelease(leftButton, () => player.moveLeft = false);
+    handlePress(rightButton, () => player.moveRight = true);
+    handleRelease(rightButton, () => player.moveRight = false);
     
-    rightButton.mousePressed(() => player.moveRight = true);
-    rightButton.mouseReleased(() => player.moveRight = false);
-    rightButton.touchStart(() => { player.moveRight = true; return false; });
-    rightButton.touchEnd(() => { player.moveRight = false; return false; });
+    // Shooting controls
+    handlePress(shootButton, () => player.isShooting = true);
+    handleRelease(shootButton, () => player.isShooting = false);
     
-    shootButton.mousePressed(() => player.shooting = true);
-    shootButton.mouseReleased(() => player.shooting = false);
-    shootButton.touchStart(() => { player.shooting = true; return false; });
-    shootButton.touchEnd(() => { player.shooting = false; return false; });
+    // Prevent default touch behavior on document to avoid scrolling
+    document.addEventListener('touchmove', (e) => {
+      if (e.target === leftButton.elt || e.target === rightButton.elt || e.target === shootButton.elt) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+    
+    // Add visual feedback for touch
+    const addTouchFeedback = (button) => {
+      button.elt.addEventListener('touchstart', () => {
+        button.style('background-color', 'rgba(255, 255, 255, 0.5)');
+      });
+      
+      button.elt.addEventListener('touchend', () => {
+        button.style('background-color', button === shootButton ? 'rgba(255, 50, 50, 0.6)' : 'rgba(255, 255, 255, 0.3)');
+      });
+    };
+    
+    addTouchFeedback(leftButton);
+    addTouchFeedback(rightButton);
+    addTouchFeedback(shootButton);
     
     // Hide buttons initially, they'll be shown when game starts
     leftButton.hide();
@@ -97,16 +188,27 @@ function setup() {
 }
 
 function draw() {
+  // Clear the background
   background(0);
   
+  // Save the current drawing state
+  push();
+  
+  // Apply scaling
+  scale(gameScale);
+  
+  // Draw game content
   if (gameState === 'menu') {
     drawMenu();
   } else if (gameState === 'playing') {
     drawGame();
-  } else if (gameState === 'gameOver') {
-    document.getElementById('game-over').style.display = 'block';
-    document.getElementById('final-wave').textContent = wave - 1;
   }
+  
+  // Restore the drawing state
+  pop();
+  
+  // Draw HUD on top of scaled content
+  displayHUD();
 }
 
 function drawMenu() {
@@ -179,9 +281,12 @@ function getDots(value, min, max) {
 }
 
 function drawGame() {
-  if (bgImage) {
-    image(bgImage, 0, 0, width, height);
-  }
+  // Draw background - scale to fill the game area
+  const scaledWidth = width / gameScale;
+  const scaledHeight = height / gameScale;
+  
+  // Draw background image
+  image(bgImage, 0, 0, scaledWidth, scaledHeight);
   
   player.update();
   player.show();

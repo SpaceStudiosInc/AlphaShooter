@@ -51,15 +51,25 @@ class Player {
   }
   
   update() {
+    // Get the game scale from the global scope
+    const gameScale = window.gameScale || 1;
+    const scaledWidth = width / gameScale;
+    const scaledHeight = height / gameScale;
+    
+    // Movement - adjust speed based on scale
+    const movementSpeed = this.speed * (1 + (1 - gameScale) * 0.5); // Adjust speed based on scale
+    
     // Handle keyboard controls
-    if (keyIsDown(LEFT_ARROW)) this.x -= this.speed;
-    if (keyIsDown(RIGHT_ARROW)) this.x += this.speed;
+    if (keyIsDown(LEFT_ARROW)) this.x = max(30, this.x - movementSpeed);
+    if (keyIsDown(RIGHT_ARROW)) this.x = min(scaledWidth - 30, this.x + movementSpeed);
     
     // Handle touch controls
-    if (this.moveLeft) this.x -= this.speed;
-    if (this.moveRight) this.x += this.speed;
+    if (this.moveLeft) this.x = max(30, this.x - movementSpeed);
+    if (this.moveRight) this.x = min(scaledWidth - 30, this.x + movementSpeed);
     
-    this.x = constrain(this.x, 25, width - 25);
+    // Keep player within bounds after scaling
+    this.x = constrain(this.x, 30, scaledWidth - 30);
+    this.y = constrain(this.y, 0, scaledHeight - 50);
     
     if (this.shootTimer > 0) this.shootTimer--;
     
