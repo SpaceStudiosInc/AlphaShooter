@@ -1,27 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta charset="UTF-8" />
   <title>Space Shooter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
       overflow: hidden;
-      touch-action: none;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      -khtml-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-      background-color: #000;
+      height: 100%;
+      background-color: black;
+      touch-action: none; /* Prevent touch scrolling on mobile */
     }
+
     canvas {
       display: block;
-      margin: 0 auto;
     }
+
     #game-over {
       display: none;
       position: absolute;
@@ -31,7 +29,12 @@
       color: white;
       font-family: 'Press Start 2P', cursive;
       text-align: center;
-      font-size: 24px;
+      font-size: 18px;
+      z-index: 10;
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 20px;
+      border: 2px solid white;
+      border-radius: 10px;
     }
   </style>
 </head>
@@ -41,6 +44,8 @@
     <p>Wave: <span id="final-wave">0</span></p>
     <p>Press R to Restart</p>
   </div>
+
+  <!-- Game scripts -->
   <script src="characterConfigs.js"></script>
   <script src="player.js"></script>
   <script src="enemy.js"></script>
