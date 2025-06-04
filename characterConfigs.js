@@ -14,10 +14,10 @@ const characterConfigs = [
     name: 'The Bush', // Sniper
     sprite: 'Sprites/Players/p2.png',
     speed: 5,
-    fireRate: 20, // Slow fire rate for precision
+    fireRate: 1, // Slow fire rate for precision
     damage: 20, // High damage per shot
     health: 90,
-    bulletSpeed: 10, // Fast bullets
+    bulletSpeed: 30, // Fast bullets
     continuousShooting: false,
     triShot: false
   },

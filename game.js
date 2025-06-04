@@ -40,10 +40,15 @@ let leftButton, rightButton, shootButton;
 let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 function setup() {
-  createCanvas(800, 600);
+  // Set canvas size to window size but maintain aspect ratio
+  let canvas = createCanvas(min(windowWidth, 800), min(windowHeight, 1000));
+  canvas.style('display', 'block');
   textFont('Press Start 2P');
   
   if (isMobile) {
+    // Prevent default touch behavior
+    document.ontouchmove = function(e) { e.preventDefault(); };
+    document.body.style.overflow = 'hidden';
     // Create control buttons
     leftButton = createButton('◀');
     rightButton = createButton('▶');
@@ -89,10 +94,15 @@ function setup() {
     shootButton.touchStart(() => { player.shooting = true; return false; });
     shootButton.touchEnd(() => { player.shooting = false; return false; });
     
-    // Hide buttons initially, they'll be shown when game starts
-    leftButton.hide();
-    rightButton.hide();
-    shootButton.hide();
+    // Show buttons for mobile
+    leftButton.show();
+    rightButton.show();
+    shootButton.show();
+    
+    // Make sure buttons are on top of canvas
+    leftButton.elt.style.zIndex = '1000';
+    rightButton.elt.style.zIndex = '1000';
+    shootButton.elt.style.zIndex = '1000';
   }
 }
 
@@ -107,6 +117,11 @@ function draw() {
     document.getElementById('game-over').style.display = 'block';
     document.getElementById('final-wave').textContent = wave - 1;
   }
+}
+
+function windowResized() {
+  // Resize canvas when window is resized
+  resizeCanvas(min(windowWidth, 800), min(windowHeight, 1000));
 }
 
 function drawMenu() {

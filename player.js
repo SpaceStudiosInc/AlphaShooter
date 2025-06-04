@@ -18,6 +18,38 @@ class Player {
     this.shooting = false;
   }
   
+  handleTouchStart(e) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    this.touchX = touch.clientX;
+  }
+  
+  handleTouchMove(e) {
+    e.preventDefault();
+    if (!this.touchX) return;
+    
+    const touch = e.touches[0];
+    const touchDiff = touch.clientX - this.touchX;
+    
+    if (Math.abs(touchDiff) > 5) { // Deadzone to prevent jitter
+      if (touchDiff > 0) {
+        this.moveRight = true;
+        this.moveLeft = false;
+      } else {
+        this.moveLeft = true;
+        this.moveRight = false;
+      }
+      this.touchX = touch.clientX;
+    }
+  }
+  
+  handleTouchEnd(e) {
+    e.preventDefault();
+    this.moveLeft = false;
+    this.moveRight = false;
+    this.touchX = null;
+  }
+  
   update() {
     // Handle keyboard controls
     if (keyIsDown(LEFT_ARROW)) this.x -= this.speed;
