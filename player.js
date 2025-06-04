@@ -11,15 +11,31 @@ class Player {
     this.triShot = config.triShot;
     this.shootTimer = 0;
     this.sprite = config.sprite;
+    
+    // Mobile controls state
+    this.moveLeft = false;
+    this.moveRight = false;
+    this.shooting = false;
   }
   
   update() {
+    // Handle keyboard controls
     if (keyIsDown(LEFT_ARROW)) this.x -= this.speed;
     if (keyIsDown(RIGHT_ARROW)) this.x += this.speed;
+    
+    // Handle touch controls
+    if (this.moveLeft) this.x -= this.speed;
+    if (this.moveRight) this.x += this.speed;
+    
     this.x = constrain(this.x, 25, width - 25);
     
     if (this.shootTimer > 0) this.shootTimer--;
-    if (this.continuousShooting && keyIsDown(32) && this.shootTimer === 0) {
+    
+    // Handle shooting from both keyboard and touch
+    const shouldShoot = (this.continuousShooting && (keyIsDown(32) || this.shooting)) || 
+                       (this.shooting && this.shootTimer === 0);
+    
+    if (shouldShoot && this.shootTimer === 0) {
       this.shoot();
     }
   }

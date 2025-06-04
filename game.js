@@ -36,9 +36,64 @@ function preload() {
   };
 }
 
+let leftButton, rightButton, shootButton;
+let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 function setup() {
   createCanvas(800, 600);
   textFont('Press Start 2P');
+  
+  if (isMobile) {
+    // Create control buttons
+    leftButton = createButton('◀');
+    rightButton = createButton('▶');
+    shootButton = createButton('FIRE');
+    
+    // Style buttons
+    const buttonStyle = {
+      position: 'absolute',
+      width: '80px',
+      height: '80px',
+      fontSize: '24px',
+      backgroundColor: 'rgba(255, 255, 255, 0.3)',
+      border: '2px solid white',
+      color: 'white',
+      borderRadius: '50%',
+      userSelect: 'none'
+    };
+    
+    Object.assign(leftButton.elt.style, buttonStyle, { bottom: '20px', left: '20px' });
+    Object.assign(rightButton.elt.style, buttonStyle, { bottom: '20px', left: '120px' });
+    Object.assign(shootButton.elt.style, {
+      ...buttonStyle,
+      width: '120px',
+      borderRadius: '40px',
+      bottom: '20px',
+      right: '20px',
+      fontSize: '20px'
+    });
+    
+    // Touch event listeners
+    leftButton.mousePressed(() => player.moveLeft = true);
+    leftButton.mouseReleased(() => player.moveLeft = false);
+    leftButton.touchStart(() => { player.moveLeft = true; return false; });
+    leftButton.touchEnd(() => { player.moveLeft = false; return false; });
+    
+    rightButton.mousePressed(() => player.moveRight = true);
+    rightButton.mouseReleased(() => player.moveRight = false);
+    rightButton.touchStart(() => { player.moveRight = true; return false; });
+    rightButton.touchEnd(() => { player.moveRight = false; return false; });
+    
+    shootButton.mousePressed(() => player.shooting = true);
+    shootButton.mouseReleased(() => player.shooting = false);
+    shootButton.touchStart(() => { player.shooting = true; return false; });
+    shootButton.touchEnd(() => { player.shooting = false; return false; });
+    
+    // Hide buttons initially, they'll be shown when game starts
+    leftButton.hide();
+    rightButton.hide();
+    shootButton.hide();
+  }
 }
 
 function draw() {
@@ -195,6 +250,11 @@ function keyPressed() {
       selectedCharacter = (selectedCharacter + 1) % characters.length;
     } else if (keyCode === ENTER) {
       player = new Player(characters[selectedCharacter]);
+      if (isMobile) {
+        leftButton.show();
+        rightButton.show();
+        shootButton.show();
+      }
       spawnWave();
       gameState = 'playing';
     }
