@@ -21,7 +21,7 @@ class Enemy {
     }
     if (this.speedX !== 0) {
       this.x += this.speedX;
-      if (this.x < 25 || this.x > width - 25) this.speedX *= -1;
+      if (this.x < 25 || this.x > width / window.gameScale - 25) this.speedX *= -1;
     }
   }
   
@@ -34,7 +34,7 @@ class Enemy {
   }
   
   offscreen() {
-    return this.y > height;
+    return this.y > height / window.gameScale;
   }
   
   hits(projectile) {
@@ -69,6 +69,6 @@ class Projectile {
   }
   
   offscreen() {
-    return this.y < 0 || this.y > height;
+    return this.y < 0 || this.y > height / window.gameScale;
   }
 }

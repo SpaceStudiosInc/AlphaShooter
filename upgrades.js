@@ -15,7 +15,7 @@ class Upgrade {
     rect(this.x - this.size / 2, this.y - this.size / 2, this.size, this.size);
     fill(255);
     textAlign(CENTER);
-    textSize(12);
+    textSize(12 / window.gameScale);
     text(this.type.charAt(0).toUpperCase(), this.x, this.y + 4);
   }
   

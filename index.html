@@ -1,25 +1,74 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Space Shooter</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+  <title>Alpha Shooter</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
+  <script src="characterConfigs.js"></script>
+  <script src="player.js"></script>
+  <script src="enemy.js"></script>
+  <script src="upgrades.js"></script>
+  <script src="boss.js"></script>
+  <script src="game.js"></script>
   <style>
-    html, body {
+    * {
       margin: 0;
       padding: 0;
-      overflow: hidden;
-      height: 100%;
-      background-color: black;
-      touch-action: none; /* Prevent touch scrolling on mobile */
+      box-sizing: border-box;
     }
-
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #000;
+      touch-action: none;
+    }
     canvas {
       display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
-
     #game-over {
       display: none;
       position: absolute;
@@ -27,30 +76,18 @@
       left: 50%;
       transform: translate(-50%, -50%);
       color: white;
-      font-family: 'Press Start 2P', cursive;
+      font-family: 'Press Start 2P', sans-serif;
       text-align: center;
-      font-size: 18px;
-      z-index: 10;
-      background-color: rgba(0, 0, 0, 0.8);
-      padding: 20px;
-      border: 2px solid white;
-      border-radius: 10px;
+      z-index: 100;
     }
   </style>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="game-over">
     <h1>Game Over</h1>
-    <p>Wave: <span id="final-wave">0</span></p>
-    <p>Press R to Restart</p>
+    <p>Wave: <span id="wave">0</span></p>
+    <p>Press R to Restart or SELECT on mobile</p>
   </div>
-
-  <!-- Game scripts -->
-  <script src="characterConfigs.js"></script>
-  <script src="player.js"></script>
-  <script src="enemy.js"></script>
-  <script src="boss.js"></script>
-  <script src="upgrades.js"></script>
-  <script src="game.js"></script>
 </body>
 </html>

@@ -1,79 +1,79 @@
 const characterConfigs = [
   {
-    name: 'Trexed', // Shotgunner
+    name: 'Trexed',
     sprite: 'Sprites/Players/p1.png',
     speed: 5,
-    fireRate: 15, // Slower fire rate for high-damage shots
-    damage: 15, // High damage for shotgun style
+    fireRate: 15,
+    damage: 15,
     health: 100,
     bulletSpeed: 7.5,
     continuousShooting: false,
-    triShot: true // Fires three bullets (straight + diagonal)
+    triShot: true
   },
   {
-    name: 'The Bush', // Sniper
+    name: 'The Bush',
     sprite: 'Sprites/Players/p2.png',
     speed: 5,
-    fireRate: 1, // Slow fire rate for precision
-    damage: 20, // High damage per shot
+    fireRate: 1,
+    damage: 20,
     health: 90,
-    bulletSpeed: 30, // Fast bullets
+    bulletSpeed: 30,
     continuousShooting: false,
     triShot: false
   },
   {
-    name: 'Chancalorian', // Balanced
+    name: 'Chancalorian',
     sprite: 'Sprites/Players/p3.png',
     speed: 5,
-    fireRate: 10, // Moderate fire rate
-    damage: 10, // Moderate damage
+    fireRate: 10,
+    damage: 10,
     health: 100,
     bulletSpeed: 7.5,
-    continuousShooting: true, // Can hold to shoot
+    continuousShooting: true,
     triShot: false
   },
   {
-    name: 'Sandbag', // Tank
+    name: 'Sandbag',
     sprite: 'Sprites/Players/p4.png',
-    speed: 3, // Slow movement
+    speed: 3,
     fireRate: 12,
     damage: 10,
-    health: 120, // High health
+    health: 120,
     bulletSpeed: 6.25,
     continuousShooting: false,
     triShot: false
   },
   {
-    name: 'Cowbell', // Pistol
+    name: 'Cowbell',
     sprite: 'Sprites/Players/p5.png',
     speed: 5,
-    fireRate: 8, // Faster fire rate
-    damage: 8, // Moderate damage
+    fireRate: 8,
+    damage: 8,
     health: 90,
     bulletSpeed: 8,
-    continuousShooting: true, // Can hold to shoot
+    continuousShooting: true,
     triShot: false
   },
   {
-    name: 'Kazy', // Full-auto with debuff
+    name: 'Kazy',
     sprite: 'Sprites/Players/p6.png',
     speed: 6,
-    fireRate: 5, // Very fast fire rate
-    damage: 7, // Lower damage
-    health: 80, // Debuff: lower health
+    fireRate: 5,
+    damage: 7,
+    health: 80,
     bulletSpeed: 7.5,
-    continuousShooting: true, // Can hold to shoot
-    triShot: true // Fires three bullets
+    continuousShooting: true,
+    triShot: true
   },
   {
-    name: 'Speedsofter', // Fast-shooting, low damage
+    name: 'Speedsofter',
     sprite: 'Sprites/Players/p7.png',
-    speed: 7, // Fast movement
-    fireRate: 4, // Extremely fast fire rate
-    damage: 1.0, // Low damage
+    speed: 7,
+    fireRate: 4,
+    damage: 1.0,
     health: 85,
     bulletSpeed: 6,
-    continuousShooting: true, // Can hold to shoot
+    continuousShooting: true,
     triShot: false
   }
 ];
