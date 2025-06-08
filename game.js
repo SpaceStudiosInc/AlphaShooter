@@ -10,58 +10,63 @@ let gameState = 'menu';
 let characters = [];
 let selectedCharacter = 0;
 let bgImage;
+
+function preload() {
+  bgImage = loadImage('images/map.png');
+  characters = characterConfigs.map(config => ({
+    name: config.name,
+    sprite: loadImage(config.sprite),
+    speed: config.speed,
+    fireRate: config.fireRate,
+    damage: config.damage,
+    health: config.health,
+    bulletSpeed: config.bulletSpeed,
+    continuousShooting: config.continuousShooting,
+    triShot: config.triShot
+  }));
+  enemySprites = [
+    loadImage('Sprites/Enemy/Enemy1.png'),
+    loadImage('Sprites/Enemy/Enemy2.png')
+  ];
+  bossSprites = {
+    bodyHorizontal: loadImage('boss/body_horizontal.png'),
+    bodyVertical: loadImage('boss/body_vertical.png'),
+    turret: loadImage('boss/turret.png'),
+    turretShoot: loadImage('boss/turret_shoot.png')
+  };
+}
+
+let leftButton, rightButton, shootButton;
 let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-let leftButton, rightButton, shootButton, selectButton;
 let canvas;
 let gameScale = 1;
 let canvasWidth = 1000;
 let canvasHeight = 800;
 
-function preload() {
-  textFont('Press Start 2P');
-  try {
-    bgImage = loadImage('images/map.png', () => console.log('Background loaded'), () => console.error('Failed to load background'));
-    characters = characterConfigs.map(config => ({
-      name: config.name,
-      sprite: loadImage(config.sprite, () => console.log(`${config.name} sprite loaded`), () => console.error(`Failed to load ${config.name} sprite`)),
-      speed: config.speed,
-      fireRate: config.fireRate,
-      damage: config.damage,
-      health: config.health,
-      bulletSpeed: config.bulletSpeed,
-      continuousShooting: config.continuousShooting,
-      triShot: config.triShot
-    }));
-    enemySprites = [
-      loadImage('Sprites/Enemy/Enemy1.png', () => console.log('Enemy1 sprite loaded'), () => console.error('Failed to load Enemy1 sprite')),
-      loadImage('Sprites/Enemy/Enemy2.png', () => console.log('Enemy2 sprite loaded'), () => console.error('Failed to load Enemy2 sprite'))
-    ];
-    bossSprites = {
-      bodyHorizontal: loadImage('boss/body_horizontal.png', () => console.log('Boss body_horizontal loaded'), () => console.error('Failed to load boss body_horizontal')),
-      bodyVertical: loadImage('boss/body_vertical.png', () => console.log('Boss body_vertical loaded'), () => console.error('Failed to load boss body_vertical')),
-      turret: loadImage('boss/turret.png', () => console.log('Boss turret loaded'), () => console.error('Failed to load boss turret')),
-      turretShoot: loadImage('boss/turret_shoot.png', () => console.log('Boss turret_shoot loaded'), () => console.error('Failed to load boss turret_shoot'))
-    };
-  } catch (e) {
-    console.error('Error in preload:', e);
-  }
-}
-
 function calculateCanvasSize() {
   const maxWidth = window.innerWidth;
-  const maxHeight = window.innerHeight - (isMobile ? 100 : 0);
+  const maxHeight = window.innerHeight;
+  
+  // Calculate the scale to fit the screen while maintaining aspect ratio
   const scaleX = maxWidth / canvasWidth;
   const scaleY = maxHeight / canvasHeight;
-  gameScale = min(scaleX, scaleY) * 0.95;
+  gameScale = min(scaleX, scaleY) * 0.95; // 95% of the available space to add some padding
+  
+  // Make gameScale available globally for other components
   window.gameScale = gameScale;
+  
+  // Set the canvas size
   resizeCanvas(canvasWidth * gameScale, canvasHeight * gameScale, false);
+  
+  // Scale the canvas
   if (canvas) {
     canvas.style('width', `${canvasWidth * gameScale}px`);
     canvas.style('height', `${canvasHeight * gameScale}px`);
-    canvas.elt.style.position = 'absolute';
-    canvas.elt.style.top = '0';
-    canvas.elt.style.left = '0';
+    
+    // Apply CSS transforms for better scaling
+    canvas.elt.style.transform = 'scale(1)';
+    canvas.elt.style.transformOrigin = 'top left';
   }
 }
 
@@ -71,57 +76,58 @@ function windowResized() {
 
 function setup() {
   canvas = createCanvas(canvasWidth, canvasHeight);
-  canvas.parent('game-container');
+  textFont('Press Start 2P');
   calculateCanvasSize();
-
+  
   if (isMobile) {
+    // Create control buttons
     leftButton = createButton('◀');
     rightButton = createButton('▶');
-    selectButton = createButton('SELECT');
+    rightButton.style('font-size', '24px');
+    leftButton.style('font-size', '24px');
     shootButton = createButton('FIRE');
+    shootButton.style('font-size', '20px');
     
+    // Style buttons
     const buttonStyle = {
       position: 'fixed',
-      fontFamily: 'Press Start 2P',
-      fontSize: '20px',
+      bottom: '20px',
+      fontSize: '24px',
       padding: '15px 25px',
       borderRadius: '10px',
       backgroundColor: 'rgba(255, 255, 255, 0.3)',
       border: '2px solid white',
       color: 'white',
+      fontFamily: 'Press Start 2P',
       zIndex: 100,
       touchAction: 'manipulation',
       userSelect: 'none',
-      webkitTapHighlightColor: 'transparent'
+      WebkitTapHighlightColor: 'transparent'
     };
 
+    // Apply base styles
     leftButton.style(buttonStyle);
     rightButton.style(buttonStyle);
-    selectButton.style({
-      ...buttonStyle,
-      bottom: '100px',
-      right: '20px',
-      backgroundColor: 'rgba(50, 255, 50, 0.6)'
-    });
     shootButton.style({
       ...buttonStyle,
-      bottom: '20px',
       right: '20px',
-      backgroundColor: 'rgba(255, 50, 50, 0.6)'
+      bottom: '20px',
+      backgroundColor: 'rgba(255, 50, 50, 0.6)',
+      padding: '15px 20px',
+      fontSize: '20px'
     });
 
+    // Position buttons
     const updateButtonPositions = () => {
       const buttonBottom = window.innerHeight - 80;
       const buttonSpacing = 100;
+      
       leftButton.position(20, buttonBottom);
       rightButton.position(20 + buttonSpacing, buttonBottom);
-      selectButton.position(window.innerWidth - 150, buttonBottom + 80);
       shootButton.position(window.innerWidth - 150, buttonBottom);
     };
-
-    updateButtonPositions();
-    window.addEventListener('resize', updateButtonPositions);
-
+    
+    // Touch event listeners with touch support
     const handlePress = (button, action) => {
       button.mousePressed(action);
       button.elt.addEventListener('touchstart', (e) => {
@@ -142,151 +148,126 @@ function setup() {
       }, { passive: false });
     };
 
-    handlePress(leftButton, () => {
-      if (gameState === 'menu') {
-        selectedCharacter = (selectedCharacter - 1 + characters.length) % characters.length;
-      } else if (gameState === 'playing') {
-        player.moveLeft = true;
-      }
-    });
-    handleRelease(leftButton, () => {
-      if (gameState === 'playing') player.moveLeft = false;
-    });
-    handlePress(rightButton, () => {
-      if (gameState === 'menu') {
-        selectedCharacter = (selectedCharacter + 1) % characters.length;
-      } else if (gameState === 'playing') {
-        player.moveRight = true;
-      }
-    });
-    handleRelease(rightButton, () => {
-      if (gameState === 'playing') player.moveRight = false;
-    });
-    handlePress(selectButton, () => {
-      if (gameState === 'menu') {
-        startGame();
-      } else if (gameState === 'gameOver') {
-        resetGame();
-      }
-    });
-    handlePress(shootButton, () => {
-      if (gameState === 'playing') player.shooting = true;
-    });
-    handleRelease(shootButton, () => {
-      if (gameState === 'playing') player.shooting = false;
-    });
-
-    const addTouchFeedback = (button, activeColor) => {
-      button.elt.addEventListener('touchstart', () => {
-        button.style('background-color', activeColor);
-      });
-      button.elt.addEventListener('touchend', () => {
-        button.style('background-color', button === shootButton ? 'rgba(255, 50, 50, 0.6)' : button === selectButton ? 'rgba(50, 255, 50, 0.6)' : 'rgba(255, 255, 255, 0.3)');
-      });
-    };
-
-    addTouchFeedback(leftButton, 'rgba(255, 255, 255, 0.5)');
-    addTouchFeedback(rightButton, 'rgba(255, 255, 255, 0.5)');
-    addTouchFeedback(selectButton, 'rgba(50, 255, 50, 0.8)');
-    addTouchFeedback(shootButton, 'rgba(255, 50, 50, 0.8)');
-
+    // Movement controls
+    handlePress(leftButton, () => player.moveLeft = true);
+    handleRelease(leftButton, () => player.moveLeft = false);
+    handlePress(rightButton, () => player.moveRight = true);
+    handleRelease(rightButton, () => player.moveRight = false);
+    
+    // Shooting controls
+    handlePress(shootButton, () => player.isShooting = true);
+    handleRelease(shootButton, () => player.isShooting = false);
+    
+    // Prevent default touch behavior on document to avoid scrolling
     document.addEventListener('touchmove', (e) => {
-      if ([leftButton.elt, rightButton.elt, selectButton.elt, shootButton.elt].includes(e.target)) {
+      if (e.target === leftButton.elt || e.target === rightButton.elt || e.target === shootButton.elt) {
         e.preventDefault();
       }
     }, { passive: false });
-
-    selectButton.show();
-    leftButton.show();
-    rightButton.show();
+    
+    // Add visual feedback for touch
+    const addTouchFeedback = (button) => {
+      button.elt.addEventListener('touchstart', () => {
+        button.style('background-color', 'rgba(255, 255, 255, 0.5)');
+      });
+      
+      button.elt.addEventListener('touchend', () => {
+        button.style('background-color', button === shootButton ? 'rgba(255, 50, 50, 0.6)' : 'rgba(255, 255, 255, 0.3)');
+      });
+    };
+    
+    addTouchFeedback(leftButton);
+    addTouchFeedback(rightButton);
+    addTouchFeedback(shootButton);
+    
+    // Hide buttons initially, they'll be shown when game starts
+    leftButton.hide();
+    rightButton.hide();
     shootButton.hide();
   }
 }
 
-function startGame() {
-  player = new Player(characters[selectedCharacter]);
-  if (isMobile) {
-    leftButton.show();
-    rightButton.show();
-    shootButton.show();
-    selectButton.hide();
-  }
-  spawnWave();
-  gameState = 'playing';
-}
-
 function draw() {
+  // Clear the background
   background(0);
+  
+  // Save the current drawing state
   push();
+  
+  // Apply scaling
   scale(gameScale);
+  
+  // Draw game content
   if (gameState === 'menu') {
     drawMenu();
   } else if (gameState === 'playing') {
     drawGame();
-  } else if (gameState === 'gameOver') {
-    drawGameOver();
   }
+  
+  // Restore the drawing state
   pop();
+  
+  // Draw HUD on top of scaled content
   displayHUD();
 }
 
 function drawMenu() {
   fill(255);
   textAlign(CENTER);
-  textSize(24 / gameScale);
-  text('Select Your Ship', width / (2 * gameScale), 80 / gameScale);
-  textSize(12 / gameScale);
-  text(isMobile ? 'Use ◄/► to choose, SELECT to start' : 'Use LEFT/RIGHT to choose, ENTER to start', width / (2 * gameScale), height / gameScale - 30 / gameScale);
+  textSize(24);
+  text('Select Your Ship', width / 2, 80);
+  textSize(12);
+  text('Use LEFT/RIGHT to choose, ENTER to start', width / 2, height - 30);
   
-  let spacing = width / (characters.length + 1) / gameScale;
+  let spacing = width / (characters.length + 1);
   for (let i = 0; i < characters.length; i++) {
     let x = spacing * (i + 1);
-    let y = height / (2 * gameScale);
-    textSize(12 / gameScale);
+    let y = height / 2;
+    textSize(12);
     fill(0);
-    text(characters[i].name, x + 2 / gameScale, y - 35 / gameScale + 2 / gameScale);
+    text(characters[i].name, x + 2, y - 35 + 2);
     fill(255);
-    text(characters[i].name, x, y - 35 / gameScale);
-    image(characters[i].sprite, x - 25 / gameScale, y - 25 / gameScale, 50 / gameScale, 50 / gameScale);
-    textSize(8 / gameScale);
+    text(characters[i].name, x, y - 35);
+    image(characters[i].sprite, x - 25, y - 25, 50, 50);
+    textSize(8);
     textAlign(LEFT);
-    let statXLeft = x - 40 / gameScale;
-    let statXRight = x + 10 / gameScale;
-    let statY = y + 50 / gameScale;
+    let statXLeft = x - 40;
+    let statXRight = x + 10;
+    let statY = y + 50;
     fill(0);
-    text('SPD', statXLeft + 2 / gameScale, statY + 2 / gameScale);
-    text(getDots(characters[i].speed, 3, 7), statXRight + 2 / gameScale, statY + 2 / gameScale);
+    text('SPD', statXLeft + 2, statY + 2);
+    text(getDots(characters[i].speed, 3, 7), statXRight + 2, statY + 2);
     fill(255);
     text('SPD', statXLeft, statY);
     text(getDots(characters[i].speed, 3, 7), statXRight, statY);
     fill(0);
-    text('FIR', statXLeft + 2 / gameScale, statY + 12 / gameScale + 2 / gameScale);
-    text(getDots(15 - characters[i].fireRate, 0, 11), statXRight + 2 / gameScale, statY + 12 / gameScale + 2 / gameScale);
+    text('FIR', statXLeft + 2, statY + 12 + 2);
+    text(getDots(15 - characters[i].fireRate, 0, 11), statXRight + 2, statY + 12 + 2); // Adjusted for new fireRate range
     fill(255);
-    text('FIR', statXLeft, statY + 12 / gameScale);
-    text(getDots(15 - characters[i].fireRate, 0, 11), statXRight, statY + 12 / gameScale);
+    text('FIR', statXLeft, statY + 12);
+    text(getDots(15 - characters[i].fireRate, 0, 11), statXRight, statY + 12);
     fill(0);
-    text('DMG', statXLeft + 2 / gameScale, statY + 24 / gameScale + 2 / gameScale);
-    text(getDots(characters[i].damage, 5, 20), statXRight + 2 / gameScale, statY + 24 / gameScale + 2 / gameScale);
+    text('DMG', statXLeft + 2, statY + 24 + 2);
+    text(getDots(characters[i].damage, 5, 20), statXRight + 2, statY + 24 + 2); // Adjusted for new damage range
     fill(255);
-    text('DMG', statXLeft, statY + 24 / gameScale);
-    text(getDots(characters[i].damage, 5, 20), statXRight, statY + 24 / gameScale);
+    text('DMG', statXLeft, statY + 24);
+    text(getDots(characters[i].damage, 5, 20), statXRight, statY + 24);
     fill(0);
-    text('HP', statXLeft + 2 / gameScale, statY + 36 / gameScale + 2 / gameScale);
-    text(getDots(characters[i].health, 80, 120), statXRight + 2 / gameScale, statY + 36 / gameScale + 2 / gameScale);
+    text('HP', statXLeft + 2, statY + 36 + 2);
+    text(getDots(characters[i].health, 80, 120), statXRight + 2, statY + 36 + 2);
     fill(255);
-    text('HP', statXLeft, statY + 36 / gameScale);
-    text(getDots(characters[i].health, 80, 120), statXRight, statY + 36 / gameScale);
+    text('HP', statXLeft, statY + 36);
+    text(getDots(characters[i].health, 80, 120), statXRight, statY + 36);
     fill(0);
-    text('BLT', statXLeft + 2 / gameScale, statY + 48 / gameScale + 2 / gameScale);
-    text(getDots(characters[i].bulletSpeed, 5, 10), statXRight + 2 / gameScale, statY + 48 / gameScale + 2 / gameScale);
+    text('BLT', statXLeft + 2, statY + 48 + 2);
+    text(getDots(characters[i].bulletSpeed, 5, 10), statXRight + 2, statY + 48 + 2);
     fill(255);
-    text('BLT', statXLeft, statY + 48 / gameScale);
-    text(getDots(characters[i].bulletSpeed, 5, 10), statXRight, statY + 48 / gameScale);
+    text('BLT', statXLeft, statY + 48);
+    text(getDots(characters[i].bulletSpeed, 5, 10), statXRight, statY + 48);
     if (i === selectedCharacter) {
       stroke(255);
       noFill();
-      rect(x - 30 / gameScale, y - 30 / gameScale, 60 / gameScale, 70 / gameScale);
+      rect(x - 30, y - 30, 60, 70);
       noStroke();
     }
   }
@@ -300,8 +281,11 @@ function getDots(value, min, max) {
 }
 
 function drawGame() {
+  // Draw background - scale to fill the game area
   const scaledWidth = width / gameScale;
   const scaledHeight = height / gameScale;
+  
+  // Draw background image
   image(bgImage, 0, 0, scaledWidth, scaledHeight);
   
   player.update();
@@ -350,34 +334,17 @@ function drawGame() {
       if (wave % 5 === 0) spawnUpgrades(false);
     }
   }
-}
-
-function drawGameOver() {
-  fill(255);
-  textAlign(CENTER);
-  textSize(32 / gameScale);
-  text('Game Over', width / (2 * gameScale), height / (2 * gameScale));
-  textSize(16 / gameScale);
-  text(`Wave: ${wave}`, width / (2 * gameScale), height / (2 * gameScale) + 40 / gameScale);
-  text('Press R to Restart or SELECT on mobile', width / (2 * gameScale), height / (2 * gameScale) + 80 / gameScale);
-  document.getElementById('game-over').style.display = 'block';
-  document.getElementById('wave').textContent = wave;
-  if (isMobile) {
-    leftButton.hide();
-    rightButton.hide();
-    shootButton.hide();
-    selectButton.show();
-    selectButton.elt.textContent = 'RESTART';
-  }
+  
+  textSize(16);
+  displayHUD();
 }
 
 function displayHUD() {
   fill(255);
   textAlign(LEFT);
-  textSize(16 / gameScale);
-  text(`Wave: ${wave}`, 10 / gameScale, 30 / gameScale);
-  text(`Score: ${score}`, 10 / gameScale, 60 / gameScale);
-  text(`Health: ${player.health}`, 10 / gameScale, 90 / gameScale);
+  text(`Wave: ${wave}`, 10, 30);
+  text(`Score: ${score}`, 10, 60);
+  text(`Health: ${player.health}`, 10, 90);
 }
 
 function keyPressed() {
@@ -387,7 +354,14 @@ function keyPressed() {
     } else if (keyCode === RIGHT_ARROW) {
       selectedCharacter = (selectedCharacter + 1) % characters.length;
     } else if (keyCode === ENTER) {
-      startGame();
+      player = new Player(characters[selectedCharacter]);
+      if (isMobile) {
+        leftButton.show();
+        rightButton.show();
+        shootButton.show();
+      }
+      spawnWave();
+      gameState = 'playing';
     }
   } else if (gameState === 'playing') {
     if (keyCode === 32 && !player.continuousShooting) {
@@ -401,7 +375,7 @@ function keyPressed() {
 function spawnWave() {
   let enemyCount = 5 + wave * 2;
   for (let i = 0; i < enemyCount; i++) {
-    let x = random(50, width / gameScale - 50);
+    let x = random(50, width - 50);
     let y = -50;
     let moves = random() > 0.5;
     let shoots = random() > 0.7;
@@ -410,14 +384,14 @@ function spawnWave() {
 }
 
 function spawnBoss() {
-  boss = new Boss(width / (2 * gameScale), -50, wave);
+  boss = new Boss(width / 2, -50, wave);
 }
 
 function spawnUpgrades(isBossWave) {
   let upgradeCount = isBossWave ? 3 : 1;
   for (let i = 0; i < upgradeCount; i++) {
-    let x = random(50, width / gameScale - 50);
-    let y = random(50, height / gameScale - 50);
+    let x = random(50, width - 50);
+    let y = random(50, height - 50);
     upgrades.push(new Upgrade(x, y, isBossWave));
   }
 }
@@ -461,12 +435,5 @@ function resetGame() {
   score = 0;
   gameState = 'playing';
   document.getElementById('game-over').style.display = 'none';
-  if (isMobile) {
-    leftButton.show();
-    rightButton.show();
-    shootButton.show();
-    selectButton.hide();
-    selectButton.elt.textContent = 'SELECT';
-  }
   spawnWave();
 }

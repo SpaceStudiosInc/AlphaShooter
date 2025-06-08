@@ -26,7 +26,7 @@ class Boss {
       this.shootTimer = 60;
     }
     
-    this.x = constrain(this.x, 50, width / window.gameScale - 50);
+    this.x = constrain(this.x, 50, width - 50);
   }
   
   show() {
