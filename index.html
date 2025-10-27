@@ -2,9 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Runner Shooter</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -14,68 +19,87 @@
             min-height: 100vh;
             background: #fff;
             font-family: 'Courier New', monospace;
+            overflow-x: hidden;
         }
         #gameContainer {
             text-align: center;
+            width: 100%;
+            max-width: 800px;
+            padding: 10px;
+        }
+        #canvasWrapper {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
         }
         canvas {
             border: 2px solid #000;
             background: #fff;
             display: block;
+            width: 100%;
+            height: auto;
             margin: 0 auto;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+            touch-action: none;
         }
         #score {
-            font-size: 20px;
-            margin: 10px;
+            font-size: 18px;
+            margin: 8px;
             font-weight: bold;
             color: #000;
         }
         #gameOver {
-            font-size: 28px;
+            font-size: 24px;
             color: #000;
             margin: 10px;
             display: none;
+            font-weight: bold;
         }
         #instructions {
-            margin: 10px;
-            font-size: 14px;
+            margin: 8px;
+            font-size: 12px;
             color: #000;
+            line-height: 1.4;
         }
         #controls {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             justify-content: center;
-            margin: 15px;
+            margin: 12px;
+            flex-wrap: wrap;
         }
         .btn {
-            padding: 15px 30px;
-            font-size: 18px;
+            padding: 12px 25px;
+            font-size: 16px;
             font-family: 'Courier New', monospace;
             background: #fff;
             border: 2px solid #000;
             cursor: pointer;
             user-select: none;
             touch-action: manipulation;
+            min-width: 100px;
         }
         .btn:active {
             background: #ddd;
         }
         #ammo {
-            font-size: 18px;
+            font-size: 16px;
             margin: 5px;
             font-weight: bold;
             color: #000;
         }
         #scoreboard {
-            margin: 20px auto;
+            margin: 15px auto;
             max-width: 400px;
             text-align: left;
+            padding: 0 10px;
         }
         #scoreboard h3 {
             text-align: center;
             margin-bottom: 10px;
+            font-size: 18px;
         }
         #scoreList {
             list-style: none;
@@ -83,13 +107,112 @@
             margin: 0;
         }
         #scoreList li {
-            padding: 8px;
+            padding: 6px;
             border-bottom: 1px solid #000;
             display: flex;
             justify-content: space-between;
+            font-size: 14px;
         }
         .rank {
             font-weight: bold;
+        }
+
+        /* Mobile optimizations */
+        @media screen and (max-width: 768px) {
+            #gameContainer {
+                padding: 5px;
+            }
+            #score {
+                font-size: 16px;
+                margin: 5px;
+            }
+            #ammo {
+                font-size: 14px;
+                margin: 3px;
+            }
+            #gameOver {
+                font-size: 20px;
+                margin: 8px;
+            }
+            #instructions {
+                font-size: 11px;
+                margin: 5px;
+            }
+            #controls {
+                gap: 10px;
+                margin: 8px;
+            }
+            .btn {
+                padding: 10px 20px;
+                font-size: 14px;
+                min-width: 80px;
+            }
+            #scoreboard {
+                margin: 10px auto;
+                padding: 0 5px;
+            }
+            #scoreboard h3 {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+            #scoreList li {
+                padding: 5px;
+                font-size: 12px;
+            }
+        }
+
+        /* Landscape mode on mobile */
+        @media screen and (max-width: 768px) and (orientation: landscape) {
+            body {
+                align-items: flex-start;
+                padding-top: 5px;
+            }
+            #gameContainer {
+                padding: 3px;
+            }
+            #score, #ammo {
+                font-size: 12px;
+                margin: 2px;
+            }
+            #gameOver {
+                font-size: 16px;
+                margin: 5px;
+            }
+            #instructions {
+                font-size: 10px;
+                margin: 3px;
+            }
+            #controls {
+                gap: 8px;
+                margin: 5px;
+            }
+            .btn {
+                padding: 8px 15px;
+                font-size: 12px;
+                min-width: 70px;
+            }
+            #scoreboard {
+                margin: 8px auto;
+            }
+            #scoreboard h3 {
+                font-size: 14px;
+                margin-bottom: 5px;
+            }
+        }
+
+        /* Small phones */
+        @media screen and (max-width: 400px) {
+            #score, #ammo {
+                font-size: 14px;
+            }
+            #gameOver {
+                font-size: 18px;
+            }
+            .btn {
+                padding: 8px 15px;
+                font-size: 13px;
+                min-width: 70px;
+            }
         }
     </style>
 </head>
@@ -97,13 +220,15 @@
     <div id="gameContainer">
         <div id="score">SCORE: 0</div>
         <div id="ammo">AMMO: 6/6</div>
-        <canvas id="gameCanvas" width="800" height="300"></canvas>
-        <div id="gameOver">GAME OVER - PRESS SPACE</div>
+        <div id="canvasWrapper">
+            <canvas id="gameCanvas" width="800" height="300"></canvas>
+        </div>
+        <div id="gameOver">GAME OVER - TAP JUMP</div>
         <div id="controls">
             <button class="btn" id="jumpBtn">JUMP</button>
             <button class="btn" id="shootBtn">SHOOT</button>
         </div>
-        <div id="instructions">SPACE: JUMP | CTRL/CLICK SHOOT: SHOOT | 6 SHOTS THEN RELOAD</div>
+        <div id="instructions">SPACE: JUMP | CTRL/CLICK: SHOOT | 6 SHOTS THEN AUTO-RELOAD</div>
         <div id="scoreboard">
             <h3>TOP SCORES</h3>
             <ul id="scoreList"></ul>
@@ -126,7 +251,7 @@
         let score = 0;
         let gameSpeed = 4;
         let ammo = 6;
-        let maxAmmo = 6;
+        let maxAmmo = 1;
         let reloading = false;
         let reloadTime = 0;
         let topScores = [];
@@ -190,14 +315,14 @@
         async function addScore(newScore) {
             topScores.push(newScore);
             topScores.sort((a, b) => b - a);
-            topScores = topScores.slice(0, 10); // Keep top 10
+            topScores = topScores.slice(0, 10);
             displayScores();
             await saveScores();
         }
 
         // Initialize
         loadScores();
-        displayScores(); // Show empty state immediately
+        displayScores();
 
         function startGame() {
             gameRunning = true;
@@ -237,7 +362,7 @@
                 
                 if (ammo === 0) {
                     reloading = true;
-                    reloadTime = 120; // 2 seconds at 60fps
+                    reloadTime = 120;
                 }
             }
         }
@@ -307,14 +432,9 @@
 
         function drawPlayer() {
             ctx.fillStyle = '#000';
-            
-            // Head
             drawPixelRect(player.x + 4, player.y, 8, 8);
-            
-            // Body
             drawPixelRect(player.x + 6, player.y + 8, 4, 8);
             
-            // Arms
             const armFrame = Math.floor(frameCount / 8) % 2;
             if (armFrame === 0) {
                 drawPixelRect(player.x + 2, player.y + 10, 4, 2);
@@ -324,7 +444,6 @@
                 drawPixelRect(player.x + 10, player.y + 12, 4, 2);
             }
             
-            // Legs
             const legFrame = Math.floor(frameCount / 6) % 2;
             if (legFrame === 0) {
                 drawPixelRect(player.x + 4, player.y + 16, 3, 8);
@@ -340,7 +459,6 @@
             let obs;
             
             if (rand < 0.4) {
-                // Enemy person on ground
                 obs = {
                     x: canvas.width,
                     y: ground - 20,
@@ -350,7 +468,6 @@
                     hit: false
                 };
             } else if (rand < 0.7) {
-                // Plane in air - random height between 40-120 pixels above ground
                 const planeHeight = 40 + Math.floor(Math.random() * 80);
                 obs = {
                     x: canvas.width,
@@ -361,7 +478,6 @@
                     hit: false
                 };
             } else {
-                // Tank on ground
                 obs = {
                     x: canvas.width,
                     y: ground - 16,
@@ -377,37 +493,26 @@
 
         function drawPerson(x, y) {
             ctx.fillStyle = '#000';
-            // Head
             drawPixelRect(x + 3, y, 6, 6);
-            // Body
             drawPixelRect(x + 4, y + 6, 4, 8);
-            // Arms
             drawPixelRect(x, y + 8, 4, 2);
             drawPixelRect(x + 8, y + 8, 4, 2);
-            // Legs
             drawPixelRect(x + 3, y + 14, 3, 6);
             drawPixelRect(x + 6, y + 14, 3, 6);
         }
 
         function drawPlane(x, y) {
             ctx.fillStyle = '#000';
-            // Body
             drawPixelRect(x + 4, y + 2, 16, 4);
-            // Wings
             drawPixelRect(x, y + 3, 24, 2);
-            // Tail
             drawPixelRect(x + 18, y, 4, 3);
         }
 
         function drawTank(x, y) {
             ctx.fillStyle = '#000';
-            // Body
             drawPixelRect(x + 4, y + 6, 20, 8);
-            // Turret
             drawPixelRect(x + 10, y + 2, 8, 6);
-            // Cannon
             drawPixelRect(x + 18, y + 4, 8, 2);
-            // Tracks
             drawPixelRect(x, y + 12, 28, 4);
         }
 
@@ -482,7 +587,6 @@
             ctx.lineTo(canvas.width, ground);
             ctx.stroke();
             
-            // Ground dashes
             for (let i = 0; i < canvas.width; i += 30) {
                 const offset = (frameCount * 2) % 30;
                 drawPixelRect(i - offset, ground + 10, 16, 2);
@@ -506,7 +610,6 @@
             ctx.fillStyle = '#fff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Handle reload
             if (reloading) {
                 reloadTime--;
                 if (reloadTime <= 0) {
@@ -536,10 +639,25 @@
             requestAnimationFrame(gameLoop);
         }
 
+        // Prevent zoom gestures
+        document.addEventListener('gesturestart', function (e) {
+            e.preventDefault();
+        });
+
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (e) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                e.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
+
+        // Draw initial screen
         ctx.fillStyle = '#000';
         ctx.font = '20px Courier New';
         ctx.textAlign = 'center';
-        ctx.fillText('PRESS SPACE TO START', canvas.width / 2, canvas.height / 2);
+        ctx.fillText('TAP JUMP TO START', canvas.width / 2, canvas.height / 2);
     </script>
 </body>
 </html>
