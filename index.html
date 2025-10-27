@@ -1,56 +1,461 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Space Shooter</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.2/p5.min.js"></script>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      height: 100%;
-      background-color: black;
-      touch-action: none; /* Prevent touch scrolling on mobile */
-    }
-
-    canvas {
-      display: block;
-    }
-
-    #game-over {
-      display: none;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-family: 'Press Start 2P', cursive;
-      text-align: center;
-      font-size: 18px;
-      z-index: 10;
-      background-color: rgba(0, 0, 0, 0.8);
-      padding: 20px;
-      border: 2px solid white;
-      border-radius: 10px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpha Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #fff;
+            font-family: 'Courier New', monospace;
+        }
+        #gameContainer {
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #000;
+            background: #fff;
+            display: block;
+            margin: 0 auto;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        #score {
+            font-size: 20px;
+            margin: 10px;
+            font-weight: bold;
+            color: #000;
+        }
+        #gameOver {
+            font-size: 28px;
+            color: #000;
+            margin: 10px;
+            display: none;
+        }
+        #instructions {
+            margin: 10px;
+            font-size: 14px;
+            color: #000;
+        }
+        #controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 15px;
+        }
+        .btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            background: #fff;
+            border: 2px solid #000;
+            cursor: pointer;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        .btn:active {
+            background: #ddd;
+        }
+        #ammo {
+            font-size: 18px;
+            margin: 5px;
+            font-weight: bold;
+            color: #000;
+        }
+    </style>
 </head>
 <body>
-  <div id="game-over">
-    <h1>Game Over</h1>
-    <p>Wave: <span id="final-wave">0</span></p>
-    <p>Press R to Restart</p>
-  </div>
+    <div id="gameContainer">
+        <div id="score">SCORE: 0</div>
+        <div id="ammo">AMMO: 6/6</div>
+        <canvas id="gameCanvas" width="800" height="300"></canvas>
+        <div id="gameOver">GAME OVER - PRESS SPACE</div>
+        <div id="controls">
+            <button class="btn" id="jumpBtn">JUMP</button>
+            <button class="btn" id="shootBtn">SHOOT</button>
+        </div>
+        <div id="instructions">SPACE: JUMP | CTRL/CLICK SHOOT: SHOOT | 6 SHOTS THEN RELOAD</div>
+    </div>
 
-  <!-- Game scripts -->
-  <script src="characterConfigs.js"></script>
-  <script src="player.js"></script>
-  <script src="enemy.js"></script>
-  <script src="boss.js"></script>
-  <script src="upgrades.js"></script>
-  <script src="game.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const ammoElement = document.getElementById('ammo');
+        const gameOverElement = document.getElementById('gameOver');
+        const jumpBtn = document.getElementById('jumpBtn');
+        const shootBtn = document.getElementById('shootBtn');
+
+        ctx.imageSmoothingEnabled = false;
+
+        let gameRunning = false;
+        let score = 0;
+        let gameSpeed = 4;
+        let ammo = 6;
+        let maxAmmo = 6;
+        let reloading = false;
+        let reloadTime = 0;
+
+        const player = {
+            x: 60,
+            y: 0,
+            width: 16,
+            height: 24,
+            velocityY: 0,
+            jumping: false
+        };
+
+        const ground = canvas.height - 40;
+        player.y = ground - player.height;
+
+        let obstacles = [];
+        let bullets = [];
+        let frameCount = 0;
+
+        function startGame() {
+            gameRunning = true;
+            score = 0;
+            gameSpeed = 4;
+            obstacles = [];
+            bullets = [];
+            frameCount = 0;
+            ammo = maxAmmo;
+            reloading = false;
+            reloadTime = 0;
+            player.y = ground - player.height;
+            player.velocityY = 0;
+            player.jumping = false;
+            gameOverElement.style.display = 'none';
+            updateAmmoDisplay();
+            gameLoop();
+        }
+
+        function jump() {
+            if (!player.jumping && gameRunning) {
+                player.velocityY = -11;
+                player.jumping = true;
+            }
+        }
+
+        function shoot() {
+            if (gameRunning && !reloading && ammo > 0) {
+                bullets.push({
+                    x: player.x + player.width,
+                    y: player.y + 10,
+                    width: 8,
+                    height: 2
+                });
+                ammo--;
+                updateAmmoDisplay();
+                
+                if (ammo === 0) {
+                    reloading = true;
+                    reloadTime = 120; // 2 seconds at 60fps
+                }
+            }
+        }
+
+        function updateAmmoDisplay() {
+            if (reloading) {
+                const reloadPercent = Math.floor((1 - reloadTime / 120) * 100);
+                ammoElement.textContent = `RELOADING... ${reloadPercent}%`;
+            } else {
+                ammoElement.textContent = `AMMO: ${ammo}/${maxAmmo}`;
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!gameRunning) {
+                    startGame();
+                } else {
+                    jump();
+                }
+            }
+            if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+                e.preventDefault();
+                shoot();
+            }
+        });
+
+        canvas.addEventListener('click', () => {
+            if (gameRunning) {
+                shoot();
+            }
+        });
+
+        // Mobile touch controls
+        jumpBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!gameRunning) {
+                startGame();
+            } else {
+                jump();
+            }
+        });
+
+        jumpBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!gameRunning) {
+                startGame();
+            } else {
+                jump();
+            }
+        });
+
+        shootBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            shoot();
+        });
+
+        shootBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            shoot();
+        });
+
+        function drawPixelRect(x, y, w, h) {
+            ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = '#000';
+            
+            // Head
+            drawPixelRect(player.x + 4, player.y, 8, 8);
+            
+            // Body
+            drawPixelRect(player.x + 6, player.y + 8, 4, 8);
+            
+            // Arms
+            const armFrame = Math.floor(frameCount / 8) % 2;
+            if (armFrame === 0) {
+                drawPixelRect(player.x + 2, player.y + 10, 4, 2);
+                drawPixelRect(player.x + 10, player.y + 10, 4, 2);
+            } else {
+                drawPixelRect(player.x + 2, player.y + 12, 4, 2);
+                drawPixelRect(player.x + 10, player.y + 12, 4, 2);
+            }
+            
+            // Legs
+            const legFrame = Math.floor(frameCount / 6) % 2;
+            if (legFrame === 0) {
+                drawPixelRect(player.x + 4, player.y + 16, 3, 8);
+                drawPixelRect(player.x + 9, player.y + 16, 3, 8);
+            } else {
+                drawPixelRect(player.x + 4, player.y + 18, 3, 6);
+                drawPixelRect(player.x + 9, player.y + 16, 3, 8);
+            }
+        }
+
+        function createObstacle() {
+            const rand = Math.random();
+            let obs;
+            
+            if (rand < 0.4) {
+                // Enemy person on ground
+                obs = {
+                    x: canvas.width,
+                    y: ground - 20,
+                    width: 12,
+                    height: 20,
+                    type: 'person',
+                    hit: false
+                };
+            } else if (rand < 0.7) {
+                // Plane in air
+                obs = {
+                    x: canvas.width,
+                    y: ground - 100,
+                    width: 24,
+                    height: 8,
+                    type: 'plane',
+                    hit: false
+                };
+            } else {
+                // Tank on ground
+                obs = {
+                    x: canvas.width,
+                    y: ground - 16,
+                    width: 28,
+                    height: 16,
+                    type: 'tank',
+                    hit: false
+                };
+            }
+            
+            obstacles.push(obs);
+        }
+
+        function drawPerson(x, y) {
+            ctx.fillStyle = '#000';
+            // Head
+            drawPixelRect(x + 3, y, 6, 6);
+            // Body
+            drawPixelRect(x + 4, y + 6, 4, 8);
+            // Arms
+            drawPixelRect(x, y + 8, 4, 2);
+            drawPixelRect(x + 8, y + 8, 4, 2);
+            // Legs
+            drawPixelRect(x + 3, y + 14, 3, 6);
+            drawPixelRect(x + 6, y + 14, 3, 6);
+        }
+
+        function drawPlane(x, y) {
+            ctx.fillStyle = '#000';
+            // Body
+            drawPixelRect(x + 4, y + 2, 16, 4);
+            // Wings
+            drawPixelRect(x, y + 3, 24, 2);
+            // Tail
+            drawPixelRect(x + 18, y, 4, 3);
+        }
+
+        function drawTank(x, y) {
+            ctx.fillStyle = '#000';
+            // Body
+            drawPixelRect(x + 4, y + 6, 20, 8);
+            // Turret
+            drawPixelRect(x + 10, y + 2, 8, 6);
+            // Cannon
+            drawPixelRect(x + 18, y + 4, 8, 2);
+            // Tracks
+            drawPixelRect(x, y + 12, 28, 4);
+        }
+
+        function updateObstacles() {
+            if (frameCount % 80 === 0) {
+                createObstacle();
+            }
+
+            obstacles = obstacles.filter(obs => obs.x + obs.width > 0);
+
+            for (let obs of obstacles) {
+                obs.x -= gameSpeed;
+
+                if (!obs.hit &&
+                    player.x + 2 < obs.x + obs.width &&
+                    player.x + player.width - 2 > obs.x &&
+                    player.y + 2 < obs.y + obs.height &&
+                    player.y + player.height > obs.y) {
+                    gameRunning = false;
+                    gameOverElement.style.display = 'block';
+                }
+            }
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(b => b.x < canvas.width);
+
+            for (let bullet of bullets) {
+                bullet.x += 8;
+
+                for (let obs of obstacles) {
+                    if (!obs.hit &&
+                        bullet.x < obs.x + obs.width &&
+                        bullet.x + bullet.width > obs.x &&
+                        bullet.y < obs.y + obs.height &&
+                        bullet.y + bullet.height > obs.y) {
+                        obs.hit = true;
+                        score += 50;
+                    }
+                }
+            }
+
+            obstacles = obstacles.filter(obs => !obs.hit);
+        }
+
+        function drawObstacles() {
+            for (let obs of obstacles) {
+                if (obs.type === 'person') {
+                    drawPerson(obs.x, obs.y);
+                } else if (obs.type === 'plane') {
+                    drawPlane(obs.x, obs.y);
+                } else if (obs.type === 'tank') {
+                    drawTank(obs.x, obs.y);
+                }
+            }
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#000';
+            for (let bullet of bullets) {
+                drawPixelRect(bullet.x, bullet.y, bullet.width, bullet.height);
+            }
+        }
+
+        function drawGround() {
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, ground);
+            ctx.lineTo(canvas.width, ground);
+            ctx.stroke();
+            
+            // Ground dashes
+            for (let i = 0; i < canvas.width; i += 30) {
+                const offset = (frameCount * 2) % 30;
+                drawPixelRect(i - offset, ground + 10, 16, 2);
+            }
+        }
+
+        function updatePlayer() {
+            player.velocityY += 0.6;
+            player.y += player.velocityY;
+
+            if (player.y >= ground - player.height) {
+                player.y = ground - player.height;
+                player.velocityY = 0;
+                player.jumping = false;
+            }
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Handle reload
+            if (reloading) {
+                reloadTime--;
+                if (reloadTime <= 0) {
+                    reloading = false;
+                    ammo = maxAmmo;
+                }
+                updateAmmoDisplay();
+            }
+
+            drawGround();
+            updatePlayer();
+            updateObstacles();
+            updateBullets();
+            
+            drawPlayer();
+            drawObstacles();
+            drawBullets();
+
+            frameCount++;
+            score++;
+            scoreElement.textContent = 'SCORE: ' + Math.floor(score / 10);
+
+            if (frameCount % 500 === 0) {
+                gameSpeed += 0.3;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        ctx.fillStyle = '#000';
+        ctx.font = '20px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('PRESS SPACE TO START', canvas.width / 2, canvas.height / 2);
+    </script>
 </body>
 </html>
