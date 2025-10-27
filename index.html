@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Alpha Shooter</title>
+    <title>Runner Shooter</title>
     <style>
         body {
             margin: 0;
@@ -68,6 +68,29 @@
             font-weight: bold;
             color: #000;
         }
+        #scoreboard {
+            margin: 20px auto;
+            max-width: 400px;
+            text-align: left;
+        }
+        #scoreboard h3 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        #scoreList {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        #scoreList li {
+            padding: 8px;
+            border-bottom: 1px solid #000;
+            display: flex;
+            justify-content: space-between;
+        }
+        .rank {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -81,6 +104,10 @@
             <button class="btn" id="shootBtn">SHOOT</button>
         </div>
         <div id="instructions">SPACE: JUMP | CTRL/CLICK SHOOT: SHOOT | 6 SHOTS THEN RELOAD</div>
+        <div id="scoreboard">
+            <h3>TOP SCORES</h3>
+            <ul id="scoreList"></ul>
+        </div>
     </div>
 
     <script>
@@ -91,6 +118,7 @@
         const gameOverElement = document.getElementById('gameOver');
         const jumpBtn = document.getElementById('jumpBtn');
         const shootBtn = document.getElementById('shootBtn');
+        const scoreList = document.getElementById('scoreList');
 
         ctx.imageSmoothingEnabled = false;
 
@@ -101,6 +129,7 @@
         let maxAmmo = 6;
         let reloading = false;
         let reloadTime = 0;
+        let topScores = [];
 
         const player = {
             x: 60,
@@ -117,6 +146,58 @@
         let obstacles = [];
         let bullets = [];
         let frameCount = 0;
+
+        // Load scores from storage
+        async function loadScores() {
+            try {
+                const result = await window.storage.get('runner-game-scores', true);
+                if (result && result.value) {
+                    topScores = JSON.parse(result.value);
+                    displayScores();
+                }
+            } catch (error) {
+                topScores = [];
+            }
+        }
+
+        // Save scores to storage
+        async function saveScores() {
+            try {
+                await window.storage.set('runner-game-scores', JSON.stringify(topScores), true);
+            } catch (error) {
+                console.error('Failed to save scores:', error);
+            }
+        }
+
+        // Display scores
+        function displayScores() {
+            scoreList.innerHTML = '';
+            if (topScores.length === 0) {
+                const li = document.createElement('li');
+                li.innerHTML = '<span>No scores yet - be the first!</span>';
+                scoreList.appendChild(li);
+                return;
+            }
+            const displayCount = Math.min(10, topScores.length);
+            for (let i = 0; i < displayCount; i++) {
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="rank">#${i + 1}</span><span>${topScores[i]}</span>`;
+                scoreList.appendChild(li);
+            }
+        }
+
+        // Add score to leaderboard
+        async function addScore(newScore) {
+            topScores.push(newScore);
+            topScores.sort((a, b) => b - a);
+            topScores = topScores.slice(0, 10); // Keep top 10
+            displayScores();
+            await saveScores();
+        }
+
+        // Initialize
+        loadScores();
+        displayScores(); // Show empty state immediately
 
         function startGame() {
             gameRunning = true;
@@ -269,10 +350,11 @@
                     hit: false
                 };
             } else if (rand < 0.7) {
-                // Plane in air
+                // Plane in air - random height between 40-120 pixels above ground
+                const planeHeight = 40 + Math.floor(Math.random() * 80);
                 obs = {
                     x: canvas.width,
-                    y: ground - 100,
+                    y: ground - planeHeight,
                     width: 24,
                     height: 8,
                     type: 'plane',
@@ -346,6 +428,8 @@
                     player.y + player.height > obs.y) {
                     gameRunning = false;
                     gameOverElement.style.display = 'block';
+                    const finalScore = Math.floor(score / 10);
+                    addScore(finalScore);
                 }
             }
         }
