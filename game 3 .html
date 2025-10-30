@@ -1,0 +1,386 @@
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const ammoElement = document.getElementById('ammo');
+    const gameOverElement = document.getElementById('gameOver');
+    const jumpBtn = document.getElementById('jumpBtn');
+    const shootBtn = document.getElementById('shootBtn');
+    const scoreList = document.getElementById('scoreList');
+
+    ctx.imageSmoothingEnabled = false;
+
+    let gameRunning = false;
+    let score = 0;
+    let gameSpeed = 4;
+    let frameCount = 0;
+
+    // === GUN SYSTEM ===
+    const GUN = {
+        ammo: 30,
+        maxAmmo: 30,
+        heat: 0,
+        maxHeat: 100,
+        overheat: false,
+        cooldownTimer: 0,
+        fireRate: 6, // frames between shots
+        fireTimer: 0,
+        muzzleFlash: 0,
+        recoilX: 0,
+        isFiring: false
+    };
+
+    // === POWER-UPS ===
+    let powerups = [];
+    const POWERUP_TYPES = ['ammo', 'speed', 'double'];
+
+    // === PLAYER ===
+    const player = {
+        x: 60,
+        y: 0,
+        width: 16,
+        height: 24,
+        velocityY: 0,
+        jumping: false,
+        doubleShot: false,
+        doubleTimer: 0
+    };
+
+    const ground = canvas.height - 40;
+    player.y = ground - player.height;
+
+    let obstacles = [];
+    let bullets = [];
+    let particles = []; // for explosions & muzzle
+
+    // === AUDIO (simple beep) ===
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function beep(freq = 300, dur = 50, vol = 0.1) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + dur/1000);
+        osc.start();
+        osc.stop(audioCtx.currentTime + dur/1000);
+    }
+
+    // === LOAD / SAVE SCORES ===
+    async function loadScores() {
+        try {
+            const result = await window.storage.get('runner-game-scores', true);
+            if (result && result.value) topScores = JSON.parse(result.value);
+            displayScores();
+        } catch { topScores = []; }
+    }
+    async function saveScores() {
+        try { await window.storage.set('runner-game-scores', JSON.stringify(topScores), true); }
+        catch (e) { console.error(e); }
+    }
+    function displayScores() {
+        scoreList.innerHTML = '';
+        if (!topScores.length) {
+            scoreList.innerHTML = '<li><span>No scores yet!</span></li>';
+            return;
+        }
+        topScores.slice(0,10).forEach((s,i) => {
+            const li = document.createElement('li');
+            li.innerHTML = `<span class="rank">#${i+1}</span><span>${s}</span>`;
+            scoreList.appendChild(li);
+        });
+    }
+    async function addScore(s) {
+        topScores.push(s); topScores.sort((a,b)=>b-a); topScores = topScores.slice(0,10);
+        displayScores(); await saveScores();
+    }
+    let topScores = [];
+    loadScores(); displayScores();
+
+    // === START GAME ===
+    function startGame() {
+        gameRunning = true;
+        score = 0; gameSpeed = 4; frameCount = 0;
+        obstacles = []; bullets = []; particles = []; powerups = [];
+        GUN.ammo = GUN.maxAmmo; GUN.heat = 0; GUN.overheat = false; GUN.cooldownTimer = 0;
+        player.doubleShot = false; player.doubleTimer = 0;
+        player.y = ground - player.height; player.velocityY = 0; player.jumping = false;
+        gameOverElement.style.display = 'none';
+        updateAmmoDisplay();
+        gameLoop();
+    }
+
+    // === INPUT ===
+    function jump() {
+        if (!player.jumping && gameRunning) {
+            player.velocityY = -12;
+            player.jumping = true;
+            beep(400, 80);
+        }
+    }
+
+    function startShooting() {
+        if (!gameRunning || GUN.overheat) return;
+        GUN.isFiring = true;
+    }
+    function stopShooting() { GUN.isFiring = false; }
+
+    document.addEventListener('keydown', e => {
+        if (e.code === 'Space') { e.preventDefault(); if (!gameRunning) startGame(); else jump(); }
+        if (e.code.includes('Control')) { e.preventDefault(); startShooting(); }
+    });
+    document.addEventListener('keyup', e => {
+        if (e.code.includes('Control')) stopShooting();
+    });
+    canvas.addEventListener('pointerdown', () => { if (gameRunning) startShooting(); });
+    canvas.addEventListener('pointerup', stopShooting);
+    canvas.addEventListener('pointerleave', stopShooting);
+
+    jumpBtn.addEventListener('pointerdown', e => { e.preventDefault(); if (!gameRunning) startGame(); else jump(); });
+    shootBtn.addEventListener('pointerdown', e => { e.preventDefault(); startShooting(); });
+    shootBtn.addEventListener('pointerup', stopShooting);
+    shootBtn.addEventListener('pointerleave', stopShooting);
+
+    // === GUN LOGIC ===
+    function shoot() {
+        if (GUN.ammo <= 0 || GUN.heat >= GUN.maxHeat) return;
+
+        const spread = (Math.random() - 0.5) * 0.3;
+        const bulletY = player.y + 10 + spread * 10;
+        const recoil = 2;
+
+        bullets.push({
+            x: player.x + player.width + recoil,
+            y: bulletY,
+            vx: 12 + Math.random() * 2,
+            width: 8, height: 2
+        });
+
+        if (player.doubleShot) {
+            bullets.push({
+                x: player.x + player.width + recoil,
+                y: bulletY - 6,
+                vx: 12 + Math.random() * 2,
+                width: 8, height: 2
+            });
+        }
+
+        GUN.ammo--;
+        GUN.heat += 8;
+        GUN.muzzleFlash = 3;
+        GUN.recoilX = -recoil;
+        beep(150, 40, 0.15);
+
+        setTimeout(() => GUN.recoilX = 0, 50);
+    }
+
+    function updateGun() {
+        if (GUN.isFiring && GUN.fireTimer <= 0 && GUN.ammo > 0 && !GUN.overheat) {
+            shoot();
+            GUN.fireTimer = GUN.fireRate;
+        }
+        if (GUN.fireTimer > 0) GUN.fireTimer--;
+
+        // Heat cooldown
+        if (!GUN.isFiring && GUN.heat > 0) {
+            GUN.heat = Math.max(0, GUN.heat - 0.5);
+        }
+        if (GUN.heat >= GUN.maxHeat) {
+            GUN.overheat = true;
+            GUN.cooldownTimer = 180;
+            beep(100, 200, 0.2);
+        }
+        if (GUN.cooldownTimer > 0) {
+            GUN.cooldownTimer--;
+            if (GUN.cooldownTimer <= 0) {
+                GUN.overheat = false;
+                GUN.heat = 50;
+            }
+        }
+
+        updateAmmoDisplay();
+    }
+
+    function updateAmmoDisplay() {
+        if (GUN.overheat) {
+            ammoElement.textContent = `OVERHEATED! ${Math.ceil(GUN.cooldownTimer/60)}s`;
+            ammoElement.style.color = '#c00';
+        } else {
+            ammoElement.textContent = `AMMO: ${GUN.ammo}/${GUN.maxAmmo} | HEAT: ${Math.floor(GUN.heat)}%`;
+            ammoElement.style.color = GUN.heat > 70 ? '#c60' : '#000';
+        }
+    }
+
+    // === POWER-UPS ===
+    function spawnPowerup() {
+        if (Math.random() < 0.01 && powerups.length < 1) {
+            const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+            powerups.push({
+                x: canvas.width + 50,
+                y: ground - 60 - Math.random() * 60,
+                type,
+                width: 16, height: 16
+            });
+        }
+    }
+
+    function updatePowerups() {
+        powerups = powerups.filter(p => p.x > -50);
+        for (let p of powerups) {
+            p.x -= gameSpeed;
+            if (player.x < p.x + p.width && player.x + player.width > p.x &&
+                player.y < p.y + p.height && player.y + player.height > p.y) {
+                applyPowerup(p.type);
+                powerups = powerups.filter(x => x !== p);
+                beep(600, 100);
+            }
+        }
+    }
+
+    function applyPowerup(type) {
+        if (type === 'ammo') GUN.ammo = Math.min(GUN.ammo + 20, GUN.maxAmmo);
+        if (type === 'speed') gameSpeed += 1.5;
+        if (type === 'double') { player.doubleShot = true; player.doubleTimer = 600; }
+    }
+
+    function drawPowerup(p) {
+        ctx.fillStyle = p.type === 'ammo' ? '#0c0' : p.type === 'speed' ? '#00f' : '#f0f';
+        ctx.fillRect(p.x + 2, p.y + 2, 12, 12);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(p.x + 4, p.y + 4, 8, 8);
+    }
+
+    // === PARTICLES ===
+    function createExplosion(x, y, color = '#ff0') {
+        for (let i = 0; i < 8; i++) {
+            particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8 - 2,
+                life: 20,
+                color
+            });
+        }
+        beep(200, 80, 0.2);
+    }
+
+    function updateParticles() {
+        particles = particles.filter(p => p.life > 0);
+        for (let p of particles) {
+            p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life--;
+        }
+    }
+
+    function drawParticles() {
+        for (let p of particles) {
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life / 20;
+            ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    // === OBSTACLES ===
+    function createObstacle() {
+        const r = Math.random();
+        let obs = { x: canvas.width, hit: false };
+        if (r < 0.4) {
+            obs.y = ground - 20; obs.width = 12; obs.height = 20; obs.type = 'person';
+        } else if (r < 0.7) {
+            obs.y = ground - 40 - Math.random() * 80; obs.width = 24; obs.height = 8; obs.type = 'plane';
+        } else {
+            obs.y = ground - 16; obs.width = 28; obs.height = 16; obs.type = 'tank';
+        }
+        obstacles.push(obs);
+    }
+
+    function drawPerson(x, y) { /* unchanged */ }
+    function drawPlane(x, y) { /* unchanged */ }
+    function drawTank(x, y) { /* unchanged */ }
+
+    // === GAME LOOP ===
+    function gameLoop() {
+        if (!gameRunning) return;
+
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Update
+        updateGun();
+        updatePlayer();
+        updateObstacles();
+        updateBullets();
+        updatePowerups();
+        updateParticles();
+        spawnPowerup();
+
+        if (player.doubleTimer > 0) player.doubleTimer--;
+        else player.doubleShot = false;
+
+        // Draw
+        drawGround();
+        drawPlayer();
+        drawObstacles();
+        drawBullets();
+        drawPowerups(powerups);
+        drawParticles();
+
+        // Muzzle flash
+        if (GUN.muzzleFlash > 0) {
+            ctx.fillStyle = '#ff0';
+            ctx.fillRect(player.x + player.width + GUN.recoilX, player.y + 8, 12, 4);
+            GUN.muzzleFlash--;
+        }
+
+        frameCount++;
+        score++;
+        scoreElement.textContent = 'SCORE: ' + Math.floor(score / 10);
+        if (frameCount % 500 === 0) gameSpeed += 0.3;
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // === REST OF YOUR ORIGINAL FUNCTIONS (unchanged) ===
+    // drawPlayer, drawGround, updatePlayer, updateObstacles, updateBullets, etc.
+    // (Copy your original versions here — only minor tweaks needed for recoil)
+
+    // Example: add recoil to player draw
+    function drawPlayer() {
+        const drawX = player.x + GUN.recoilX;
+        ctx.fillStyle = '#000';
+        drawPixelRect(drawX + 4, player.y, 8, 8);
+        drawPixelRect(drawX + 6, player.y + 8, 4, 8);
+        // arms, legs, etc.
+        const armFrame = Math.floor(frameCount / 8) % 2;
+        if (armFrame === 0) {
+            drawPixelRect(drawX + 2, player.y + 10, 4, 2);
+            drawPixelRect(drawX + 10, player.y + 10, 4, 2);
+        } else {
+            drawPixelRect(drawX + 2, player.y + 12, 4, 2);
+            drawPixelRect(drawX + 10, player.y + 12, 4, 2);
+        }
+        const legFrame = Math.floor(frameCount / 6) % 2;
+        if (legFrame === 0) {
+            drawPixelRect(drawX + 4, player.y + 16, 3, 8);
+            drawPixelRect(drawX + 9, player.y + 16, 3, 8);
+        } else {
+            drawPixelRect(drawX + 4, player.y + 18, 3, 6);
+            drawPixelRect(drawX + 9, player.y + 16, 3, 8);
+        }
+    }
+
+    // ... include your original drawPerson, drawPlane, drawTank, drawGround, etc.
+
+    // Initial screen
+    ctx.fillStyle = '#000'; ctx.font = '20px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('HOLD SHOOT | TAP JUMP TO START', canvas.width/2, canvas.height/2);
+
+    // Prevent zoom
+    document.addEventListener('gesturestart', e => e.preventDefault());
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', e => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) e.preventDefault();
+        lastTouchEnd = now;
+    }, false);
+</script>
