@@ -5,138 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Select Your Game</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin:0; padding:0; box-sizing:border-box; }
         body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: #000;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-            color: #fff;
-            image-rendering: pixelated;
+            margin:0; padding:0; display:flex; justify-content:center; align-items:center;
+            min-height:100vh; background:#000; font-family:'Courier New',monospace;
+            overflow:hidden; color:#fff; image-rendering:pixelated;
         }
-        #menuContainer {
-            text-align: center;
-            width: 100%;
-            max-width: 800px;
-            padding: 20px;
-        }
-        h1 {
-            font-size: 36px;
-            margin-bottom: 40px;
-            text-shadow: 3px 3px 0px #fff;
-            color: #000;
-            -webkit-text-stroke: 1px #fff;
-            paint-order: stroke fill;
-        }
-        .game-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 25px;
-            margin: 30px 0;
-        }
-        .game-card {
-            background: #fff;
-            border: 4px solid #000;
-            padding: 15px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
-            overflow: hidden;
-        }
-        .game-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 0 #000;
-        }
-        .game-card:active {
-            transform: translateY(-4px);
-        }
-        .game-title {
-            font-size: 20px;
-            font-weight: bold;
-            color: #000;
-            margin-bottom: 10px;
-        }
-        .game-desc {
-            font-size: 14px;
-            color: #333;
-            line-height: 1.4;
-            margin-bottom: 15px;
-        }
-        .preview {
-            width: 100%;
-            height: 120px;
-            background: #eee;
-            border: 2px solid #000;
-            image-rendering: pixelated;
-            margin-bottom: 10px;
-            position: relative;
-            overflow: hidden;
-        }
-        .preview canvas {
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-        }
-        .play-btn {
-            background: #000;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            font-family: 'Courier New', monospace;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-        }
-        .play-btn:active {
-            background: #333;
-        }
-        footer {
-            margin-top: 50px;
-            font-size: 12px;
-            color: #666;
-        }
+        #menuContainer { text-align:center; width:100%; max-width:800px; padding:20px; }
+        h1 { font-size:36px; margin-bottom:40px; text-shadow:3px 3px 0 #fff; color:#000;
+             -webkit-text-stroke:1px #fff; paint-order:stroke fill; }
+        .game-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+                     gap:25px; margin:30px 0; }
+        .game-card { background:#fff; border:4px solid #000; padding:15px; cursor:pointer;
+                     transition:transform .2s,box-shadow .2s; position:relative; overflow:hidden; }
+        .game-card:hover { transform:translateY(-8px); box-shadow:0 12px 0 #000; }
+        .game-card:active { transform:translateY(-4px); }
+        .game-title { font-size:20px; font-weight:bold; color:#000; margin-bottom:10px; }
+        .game-desc { font-size:14px; color:#333; line-height:1.4; margin-bottom:15px; }
+        .preview { width:100%; height:120px; background:#eee; border:2px solid #000;
+                   image-rendering:pixelated; margin-bottom:10px; position:relative; overflow:hidden; }
+        .preview canvas { width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges; }
+        .play-btn { background:#000; color:#fff; border:none; padding:10px 20px;
+                    font-family:'Courier New',monospace; font-size:16px; font-weight:bold;
+                    cursor:pointer; width:100%; }
+        .play-btn:active { background:#333; }
+        footer { margin-top:50px; font-size:12px; color:#666; }
 
         /* Mobile */
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 28px;
-                margin-bottom: 30px;
-            }
-            .game-grid {
-                gap: 15px;
-            }
-            .game-card {
-                padding: 12px;
-            }
-            .game-title {
-                font-size: 18px;
-            }
-            .game-desc {
-                font-size: 13px;
-            }
-            .play-btn {
-                padding: 8px 16px;
-                font-size: 14px;
-            }
+        @media (max-width:768px){
+            h1{font-size:28px;margin-bottom:30px;}
+            .game-grid{gap:15px;}
+            .game-card{padding:12px;}
+            .game-title{font-size:18px;}
+            .game-desc{font-size:13px;}
+            .play-btn{padding:8px 16px;font-size:14px;}
         }
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 24px;
-            }
-            .preview {
-                height: 100px;
-            }
+        @media (max-width:480px){
+            h1{font-size:24px;}
+            .preview{height:100px;}
         }
     </style>
 </head>
@@ -155,8 +61,8 @@
             <!-- Game 2 -->
             <div class="game-card" onclick="loadGame('game2.html')">
                 <div class="preview" id="preview2"></div>
-                <div class="game-title">GAME 2: BOMBER </div>
-                <div class="game-desc"></div>
+                <div class="game-title">GAME 2: BOMBER</div>
+                <div class="game-desc">Drop bombs, destroy the ground, avoid enemies!</div>
                 <button class="play-btn">PLAY</button>
             </div>
         </div>
@@ -164,73 +70,134 @@
     </div>
 
     <script>
-        // Preview animations
+        // -------------------------------------------------
+        // Game 1 – Runner preview (unchanged)
+        // -------------------------------------------------
         function drawRunnerPreview(canvas, ctx) {
             let x = 0;
             function animate() {
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-
                 // Ground
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, canvas.height - 10, canvas.width, 2);
-
                 // Runner
                 x = (x + 2) % (canvas.width + 20);
                 const runnerX = x < canvas.width ? x : x - canvas.width - 20;
                 ctx.fillRect(runnerX + 10, canvas.height - 30, 8, 16);
                 ctx.fillRect(runnerX + 8, canvas.height - 14, 12, 4);
-
                 requestAnimationFrame(animate);
             }
             animate();
         }
 
-        function drawComingSoon(canvas, ctx) {
-            let frame = 0;
-            const text = "COMING SOON";
+        // -------------------------------------------------
+        // Game 2 – Bomber preview (new!)
+        // -------------------------------------------------
+        function drawBomberPreview(canvas, ctx) {
+            const w = canvas.width, h = canvas.height;
+            let planeX = 30, planeY = 30;
+            let planeDir = 1;               // 1 = right, -1 = left
+            const bombs = [];               // {x, y, exploding, frame}
+            let lastDrop = 0;
+
             function animate() {
+                // clear
                 ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#000';
-                ctx.font = '16px Courier New';
-                ctx.textAlign = 'center';
+                ctx.fillRect(0, 0, w, h);
 
-                const offset = Math.sin(frame++ / 10) * 3;
-                ctx.fillText(text, canvas.width / 2, canvas.height / 2 + offset);
+                // sky background
+                ctx.fillStyle = '#aaddff';
+                ctx.fillRect(0, 0, w, h - 20);
+
+                // ground
+                ctx.fillStyle = '#8b5a2b';
+                ctx.fillRect(0, h - 20, w, 20);
+
+                // ----- plane -----
+                planeX += planeDir * 1.5;
+                if (planeX > w - 40) planeDir = -1;
+                if (planeX < 10) planeDir = 1;
+
+                // plane body
+                ctx.fillStyle = '#555';
+                ctx.fillRect(planeX, planeY, 30, 12);
+                // wings
+                ctx.fillRect(planeX + 5, planeY - 4, 20, 6);
+                ctx.fillRect(planeX + 5, planeY + 12, 20, 6);
+                // cockpit
+                ctx.fillStyle = '#0ff';
+                ctx.fillRect(planeX + 22, planeY + 2, 6, 6);
+
+                // ----- drop bomb occasionally -----
+                if (performance.now() - lastDrop > 800) {
+                    bombs.push({x: planeX + 15, y: planeY + 12, exploding: false, frame: 0});
+                    lastDrop = performance.now();
+                }
+
+                // ----- bombs & explosions -----
+                for (let i = bombs.length - 1; i >= 0; i--) {
+                    const b = bombs[i];
+                    if (!b.exploding) {
+                        b.y += 3;
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
+                        // hit ground?
+                        if (b.y + 3 >= h - 20) {
+                            b.exploding = true;
+                            b.frame = 0;
+                            // crater
+                            ctx.fillStyle = '#543';
+                            ctx.fillRect(b.x - 12, h - 22, 24, 4);
+                        }
+                    } else {
+                        // explosion animation (simple growing circle)
+                        b.frame++;
+                        const radius = b.frame * 1.2;
+                        ctx.fillStyle = `rgba(255,${150 - b.frame * 3},0,${1 - b.frame / 30})`;
+                        ctx.beginPath();
+                        ctx.arc(b.x, h - 20, radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        if (b.frame > 30) bombs.splice(i, 1);
+                    }
+                }
 
                 requestAnimationFrame(animate);
             }
             animate();
         }
 
-        // Initialize previews
+        // -------------------------------------------------
+        // Init both previews
+        // -------------------------------------------------
         window.onload = () => {
+            // ---- Game 1 ----
             const preview1 = document.getElementById('preview1');
             const canvas1 = document.createElement('canvas');
-            canvas1.width = 280;
-            canvas1.height = 120;
+            canvas1.width = 280; canvas1.height = 120;
             preview1.appendChild(canvas1);
             const ctx1 = canvas1.getContext('2d');
             ctx1.imageSmoothingEnabled = false;
             drawRunnerPreview(canvas1, ctx1);
 
+            // ---- Game 2 ----
             const preview2 = document.getElementById('preview2');
             const canvas2 = document.createElement('canvas');
-            canvas2.width = 280;
-            canvas2.height = 120;
+            canvas2.width = 280; canvas2.height = 120;
             preview2.appendChild(canvas2);
             const ctx2 = canvas2.getContext('2d');
             ctx2.imageSmoothingEnabled = false;
-            drawComingSoon(canvas2, ctx2);
+            drawBomberPreview(canvas2, ctx2);
         };
 
+        // -------------------------------------------------
         // Load selected game
+        // -------------------------------------------------
         function loadGame(url) {
             window.location.href = url;
         }
 
-        // Prevent zoom
+        // Prevent zoom on iOS
         document.addEventListener('gesturestart', e => e.preventDefault());
     </script>
 </body>
