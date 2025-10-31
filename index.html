@@ -1,282 +1,317 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Select Your Game</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            margin:0; padding:0; display:flex; justify-content:center; align-items:center;
-            min-height:100vh; background:#000; font-family:'Courier New',monospace;
-            overflow:hidden; color:#fff; image-rendering:pixelated;
-        }
-        #menuContainer { text-align:center; width:100%; max-width:800px; padding:20px; }
-        h1 { font-size:36px; margin-bottom:40px; text-shadow:3px 3px 0 #fff; color:#fff;
-             -webkit-text-stroke:1px #fff; paint-order:stroke fill; }
-        .game-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-                     gap:25px; margin:30px 0; }
-        .game-card { background:#fff; border:4px solid #000; padding:15px; cursor:pointer;
-                     transition:transform .2s,box-shadow .2s; position:relative; overflow:hidden; }
-        .game-card:hover { transform:translateY(-8px); box-shadow:0 12px 0 #000; }
-        .game-card:active { transform:translateY(-4px); }
-        .game-title { font-size:20px; font-weight:bold; color:#000; margin-bottom:10px; }
-        .game-desc { font-size:14px; color:#333; line-height:1.4; margin-bottom:15px; }
-        .preview { width:100%; height:120px; background:#fff; border:2px solid #000;
-                   image-rendering:pixelated; margin-bottom:10px; position:relative; overflow:hidden; }
-        .preview canvas { width:100%; height:100%; image-rendering:pixelated; image-rendering:crisp-edges; }
-        .play-btn { background:#000; color:#fff; border:none; padding:10px 20px;
-                    font-family:'Courier New',monospace; font-size:16px; font-weight:bold;
-                    cursor:pointer; width:100%; }
-        .play-btn:active { background:#333; }
-        footer { margin-top:50px; font-size:12px; color:#666; }
-        @media (max-width:768px){
-            h1{font-size:28px;margin-bottom:30px;}
-            .game-grid{gap:15px;}
-            .game-card{padding:12px;}
-            .game-title{font-size:18px;}
-            .game-desc{font-size:13px;}
-            .play-btn{padding:8px 16px;font-size:14px;}
-        }
-        @media (max-width:480px){
-            h1{font-size:24px;}
-            .preview{height:100px;}
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Select Your Game</title>
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body {
+        width: 100%;
+        height: 100%;
+        background: #000;
+        font-family: 'Courier New', monospace;
+        color: #fff;
+        image-rendering: pixelated;
+        overflow-x: hidden; /* allow vertical scroll, block sideways scroll */
+    }
+    body {
+        display: block; /* remove flex centering */
+        padding: 40px 0; /* space at top and bottom */
+    }
+
+    #menuContainer {
+        text-align: center;
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    h1 {
+        font-size: 36px;
+        margin-bottom: 40px;
+        text-shadow: 3px 3px 0 #fff;
+        color: #fff;
+        -webkit-text-stroke: 1px #fff;
+        paint-order: stroke fill;
+    }
+
+    .game-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 25px;
+        margin: 30px 0;
+    }
+
+    .game-card {
+        background: #fff;
+        border: 4px solid #000;
+        padding: 15px;
+        cursor: pointer;
+        transition: transform .2s, box-shadow .2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .game-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 0 #000;
+    }
+
+    .game-card:active { transform: translateY(-4px); }
+
+    .game-title {
+        font-size: 20px;
+        font-weight: bold;
+        color: #000;
+        margin-bottom: 10px;
+    }
+
+    .game-desc {
+        font-size: 14px;
+        color: #333;
+        line-height: 1.4;
+        margin-bottom: 15px;
+    }
+
+    .preview {
+        width: 100%;
+        height: 120px;
+        background: #fff;
+        border: 2px solid #000;
+        image-rendering: pixelated;
+        margin-bottom: 10px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .preview canvas {
+        width: 100%;
+        height: 100%;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+    }
+
+    .play-btn {
+        background: #000;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        font-family: 'Courier New', monospace;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .play-btn:active { background: #333; }
+
+    footer {
+        margin-top: 50px;
+        font-size: 12px;
+        color: #666;
+    }
+
+    @media (max-width:768px){
+        h1{font-size:28px;margin-bottom:30px;}
+        .game-grid{gap:15px;}
+        .game-card{padding:12px;}
+        .game-title{font-size:18px;}
+        .game-desc{font-size:13px;}
+        .play-btn{padding:8px 16px;font-size:14px;}
+    }
+    @media (max-width:480px){
+        h1{font-size:24px;}
+        .preview{height:100px;}
+    }
+</style>
 </head>
 <body>
-    <div id="menuContainer">
-        <h1>SELECT GAME</h1>
-        <div class="game-grid">
-            <!-- Game 1: RUNNER SHOOTER -->
-            <div class="game-card" onclick="loadGame('game1.html')">
-                <div class="preview" id="preview1"></div>
-                <div class="game-title">GAME 1: RUNNER</div>
-                <div class="game-desc">Step by Step, Oh Baby.</div>
-                <button class="play-btn">PLAY</button>
-            </div>
-
-            <!-- Game 2: BOMBER -->
-            <div class="game-card" onclick="loadGame('game2.html')">
-                <div class="preview" id="preview2"></div>
-                <div class="game-title">GAME 2: BOMBER</div>
-                <div class="game-desc"> Who brought a drone?</div>
-                <button class="play-btn">PLAY</button>
-            </div>
-
-            <!-- Game 3: FIGHTER -->
-            <div class="game-card" onclick="loadGame('game3.html')">
-                <div class="preview" id="preview3"></div>
-                <div class="game-title">GAME 3: Out of Bullets</div>
-                <div class="game-desc"> Last Resort</div>
-                <button class="play-btn">PLAY</button>
-            </div>
+<div id="menuContainer">
+    <h1>SELECT GAME</h1>
+    <div class="game-grid">
+        <div class="game-card" onclick="loadGame('game1.html')">
+            <div class="preview" id="preview1"></div>
+            <div class="game-title">GAME 1: RUNNER</div>
+            <div class="game-desc">Step by Step, Oh Baby.</div>
+            <button class="play-btn">PLAY</button>
         </div>
-        <footer>Use arrow keys, space, or touch</footer>
+
+        <div class="game-card" onclick="loadGame('game2.html')">
+            <div class="preview" id="preview2"></div>
+            <div class="game-title">GAME 2: BOMBER</div>
+            <div class="game-desc">Who brought a drone?</div>
+            <button class="play-btn">PLAY</button>
+        </div>
+
+        <div class="game-card" onclick="loadGame('game3.html')">
+            <div class="preview" id="preview3"></div>
+            <div class="game-title">GAME 3: Out of Bullets</div>
+            <div class="game-desc">Last Resort</div>
+            <button class="play-btn">PLAY</button>
+        </div>
     </div>
+    <footer>Use arrow keys, space, or touch</footer>
+</div>
 
-    <script>
-        // -------------------------------------------------
-        // Game 1 – RUNNER (B&W)
-        // -------------------------------------------------
-        function drawRunnerPreview(canvas, ctx) {
-            let x = 0;
-            function animate() {
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, canvas.height - 10, canvas.width, 2);
-                x = (x + 2) % (canvas.width + 20);
-                const runnerX = x < canvas.width ? x : x - canvas.width - 20;
-                ctx.fillRect(runnerX + 10, canvas.height - 30, 8, 16);
-                ctx.fillRect(runnerX + 8, canvas.height - 14, 12, 4);
-                requestAnimationFrame(animate);
-            }
-            animate();
+<script>
+function drawRunnerPreview(canvas, ctx) {
+    let x = 0;
+    function animate() {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, canvas.height - 10, canvas.width, 2);
+        x = (x + 2) % (canvas.width + 20);
+        const runnerX = x < canvas.width ? x : x - canvas.width - 20;
+        ctx.fillRect(runnerX + 10, canvas.height - 30, 8, 16);
+        ctx.fillRect(runnerX + 8, canvas.height - 14, 12, 4);
+        requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+function drawBomberPreview(canvas, ctx) {
+    const w = canvas.width, h = canvas.height;
+    let planeX = 30, planeY = 30, planeDir = 1;
+    const bombs = [];
+    let lastDrop = 0;
+    function animate() {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, h - 20, w, 20);
+
+        planeX += planeDir * 1.5;
+        if (planeX > w - 40) planeDir = -1;
+        if (planeX < 10) planeDir = 1;
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(planeX, planeY, 30, 12);
+        ctx.fillRect(planeX + 5, planeY - 4, 20, 6);
+        ctx.fillRect(planeX + 5, planeY + 12, 20, 6);
+        ctx.fillRect(planeX + 22, planeY + 2, 6, 6);
+
+        if (performance.now() - lastDrop > 800) {
+            bombs.push({x: planeX + 15, y: planeY + 12, exploding: false, frame: 0});
+            lastDrop = performance.now();
         }
 
-        // -------------------------------------------------
-        // Game 2 – BOMBER (B&W)
-        // -------------------------------------------------
-        function drawBomberPreview(canvas, ctx) {
-            const w = canvas.width, h = canvas.height;
-            let planeX = 30, planeY = 30;
-            let planeDir = 1;
-            const bombs = [];
-            let lastDrop = 0;
-
-            function animate() {
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, w, h);
+        for (let i = bombs.length - 1; i >= 0; i--) {
+            const b = bombs[i];
+            if (!b.exploding) {
+                b.y += 3;
                 ctx.fillStyle = '#000';
-                ctx.fillRect(0, h - 20, w, 20);
-
-                planeX += planeDir * 1.5;
-                if (planeX > w - 40) planeDir = -1;
-                if (planeX < 10) planeDir = 1;
-
-                ctx.fillStyle = '#000';
-                ctx.fillRect(planeX, planeY, 30, 12);
-                ctx.fillRect(planeX + 5, planeY - 4, 20, 6);
-                ctx.fillRect(planeX + 5, planeY + 12, 20, 6);
-                ctx.fillRect(planeX + 22, planeY + 2, 6, 6);
-
-                if (performance.now() - lastDrop > 800) {
-                    bombs.push({x: planeX + 15, y: planeY + 12, exploding: false, frame: 0});
-                    lastDrop = performance.now();
+                ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
+                if (b.y + 3 >= h - 20) {
+                    b.exploding = true;
+                    b.frame = 0;
+                    ctx.fillRect(b.x - 12, h - 22, 24, 4);
                 }
-
-                for (let i = bombs.length - 1; i >= 0; i--) {
-                    const b = bombs[i];
-                    if (!b.exploding) {
-                        b.y += 3;
-                        ctx.fillStyle = '#000';
-                        ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
-                        if (b.y + 3 >= h - 20) {
-                            b.exploding = true;
-                            b.frame = 0;
-                            ctx.fillStyle = '#000';
-                            ctx.fillRect(b.x - 12, h - 22, 24, 4);
-                        }
-                    } else {
-                        b.frame++;
-                        const radius = b.frame * 1.2;
-                        const alpha = 1 - b.frame / 30;
-                        ctx.fillStyle = `rgba(0,0,0,${alpha})`;
-                        ctx.beginPath();
-                        ctx.arc(b.x, h - 20, radius, 0, Math.PI * 2);
-                        ctx.fill();
-                        if (b.frame > 30) bombs.splice(i, 1);
-                    }
-                }
-                requestAnimationFrame(animate);
+            } else {
+                b.frame++;
+                const radius = b.frame * 1.2;
+                const alpha = 1 - b.frame / 30;
+                ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+                ctx.beginPath();
+                ctx.arc(b.x, h - 20, radius, 0, Math.PI * 2);
+                ctx.fill();
+                if (b.frame > 30) bombs.splice(i, 1);
             }
-            animate();
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+function drawFighterPreview(canvas, ctx) {
+    const w = canvas.width, h = canvas.height;
+    let p1x = 60, p2x = w - 80;
+    let p1frame = 0, p2frame = 0;
+    let p1action = 'idle', p2action = 'idle';
+    let lastPunch = 0;
+
+    function drawFighter(x, y, frame, facingRight) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(x + 8, y + 10, 12, 20);
+        ctx.fillRect(x + 10, y, 8, 10);
+        const armY = y + 12;
+        if (frame < 3) {
+            ctx.fillRect(x + 4, armY, 6, 8);
+            ctx.fillRect(x + 18, armY, 6, 8);
+        } else {
+            const punchX = facingRight ? x + 20 : x - 6;
+            ctx.fillRect(punchX, armY, 8, 6);
+            ctx.fillRect(facingRight ? x + 4 : x + 16, armY, 6, 8);
+        }
+        ctx.fillRect(x + 8, y + 30, 5, 10);
+        ctx.fillRect(x + 15, y + 30, 5, 10);
+    }
+
+    function animate() {
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, h - 15, w, 15);
+        ctx.fillRect(10, h - 25, w - 20, 2);
+        ctx.fillRect(10, h - 5, w - 20, 2);
+
+        if (Math.random() < 0.02 && performance.now() - lastPunch > 600) {
+            if (Math.random() < 0.5) p1action = 'punch'; else p2action = 'punch';
+            lastPunch = performance.now();
         }
 
-        // -------------------------------------------------
-        // Game 3 – FIGHTER (B&W 1v1 Combat)
-        // -------------------------------------------------
-        function drawFighterPreview(canvas, ctx) {
-            const w = canvas.width, h = canvas.height;
-            let p1x = 60, p2x = w - 80;
-            let p1frame = 0, p2frame = 0;
-            let p1action = 'idle', p2action = 'idle';
-            let lastPunch = 0;
+        p1frame = (p1frame + 0.15) % 6;
+        p2frame = (p2frame + 0.15) % 6;
 
-            function drawFighter(x, y, frame, facingRight) {
-                ctx.fillStyle = '#000';
-                // Body
-                ctx.fillRect(x + 8, y + 10, 12, 20);
-                // Head
-                ctx.fillRect(x + 10, y, 8, 10);
-                // Arms
-                const armY = y + 12;
-                if (frame < 3) {
-                    ctx.fillRect(x + 4, armY, 6, 8);
-                    ctx.fillRect(x + 18, armY, 6, 8);
-                } else {
-                    const punchX = facingRight ? x + 20 : x - 6;
-                    ctx.fillRect(punchX, armY, 8, 6);
-                    ctx.fillRect(facingRight ? x + 4 : x + 16, armY, 6, 8);
-                }
-                // Legs
-                ctx.fillRect(x + 8, y + 30, 5, 10);
-                ctx.fillRect(x + 15, y + 30, 5, 10);
+        if (p1action === 'punch' && p1frame > 3) p1action = 'idle';
+        if (p2action === 'punch' && p2frame > 3) p2action = 'idle';
+
+        drawFighter(p1x, h - 55, p1action === 'punch' ? p1frame : p1frame % 3, true);
+        drawFighter(p2x, h - 55, p2action === 'punch' ? p2frame : p2frame % 3, false);
+
+        if (p1action === 'punch' && p1frame > 2 && p1frame < 4 && Math.abs(p1x + 28 - p2x) < 10) {
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            for (let i = 0; i < 6; i++) {
+                const dx = (Math.random() - 0.5) * 10;
+                const dy = (Math.random() - 0.5) * 10;
+                ctx.fillRect(p2x + 10 + dx, h - 45 + dy, 3, 3);
             }
-
-            function animate() {
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, w, h);
-
-                // Ring floor
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, h - 15, w, 15);
-                ctx.fillRect(10, h - 25, w - 20, 2);
-                ctx.fillRect(10, h - 5, w - 20, 2);
-
-                // Random actions
-                if (Math.random() < 0.02 && performance.now() - lastPunch > 600) {
-                    if (Math.random() < 0.5) p1action = 'punch'; else p2action = 'punch';
-                    lastPunch = performance.now();
-                }
-
-                // Update frames
-                p1frame = (p1frame + 0.15) % 6;
-                p2frame = (p2frame + 0.15) % 6;
-
-                // Reset action after punch
-                if (p1action === 'punch' && p1frame > 3) p1action = 'idle';
-                if (p2action === 'punch' && p2frame > 3) p2action = 'idle';
-
-                // Draw fighters
-                drawFighter(p1x, h - 55, p1action === 'punch' ? p1frame : p1frame % 3, true);
-                drawFighter(p2x, h - 55, p2action === 'punch' ? p2frame : p2frame % 3, false);
-
-                // Hit effect
-                if (p1action === 'punch' && p1frame > 2 && p1frame < 4 && Math.abs(p1x + 28 - p2x) < 10) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                    for (let i = 0; i < 6; i++) {
-                        const dx = (Math.random() - 0.5) * 10;
-                        const dy = (Math.random() - 0.5) * 10;
-                        ctx.fillRect(p2x + 10 + dx, h - 45 + dy, 3, 3);
-                    }
-                }
-                if (p2action === 'punch' && p2frame > 2 && p2frame < 4 && Math.abs(p2x - 6 - (p1x + 20)) < 10) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                    for (let i = 0; i < 6; i++) {
-                        const dx = (Math.random() - 0.5) * 10;
-                        const dy = (Math.random() - 0.5) * 10;
-                        ctx.fillRect(p1x + 10 + dx, h - 45 + dy, 3, 3);
-                    }
-                }
-
-                requestAnimationFrame(animate);
+        }
+        if (p2action === 'punch' && p2frame > 2 && p2frame < 4 && Math.abs(p2x - 6 - (p1x + 20)) < 10) {
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            for (let i = 0; i < 6; i++) {
+                const dx = (Math.random() - 0.5) * 10;
+                const dy = (Math.random() - 0.5) * 10;
+                ctx.fillRect(p1x + 10 + dx, h - 45 + dy, 3, 3);
             }
-            animate();
         }
+        requestAnimationFrame(animate);
+    }
+    animate();
+}
 
-        // -------------------------------------------------
-        // Init all previews
-        // -------------------------------------------------
-        window.onload = () => {
-            // Game 1
-            const preview1 = document.getElementById('preview1');
-            const canvas1 = document.createElement('canvas');
-            canvas1.width = 280; canvas1.height = 120;
-            preview1.appendChild(canvas1);
-            const ctx1 = canvas1.getContext('2d');
-            ctx1.imageSmoothingEnabled = false;
-            drawRunnerPreview(canvas1, ctx1);
+window.onload = () => {
+    const setupPreview = (id, drawFunc) => {
+        const container = document.getElementById(id);
+        const canvas = document.createElement('canvas');
+        canvas.width = 280;
+        canvas.height = 120;
+        container.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        drawFunc(canvas, ctx);
+    };
 
-            // Game 2
-            const preview2 = document.getElementById('preview2');
-            const canvas2 = document.createElement('canvas');
-            canvas2.width = 280; canvas2.height = 120;
-            preview2.appendChild(canvas2);
-            const ctx2 = canvas2.getContext('2d');
-            ctx2.imageSmoothingEnabled = false;
-            drawBomberPreview(canvas2, ctx2);
+    setupPreview('preview1', drawRunnerPreview);
+    setupPreview('preview2', drawBomberPreview);
+    setupPreview('preview3', drawFighterPreview);
+};
 
-            // Game 3
-            const preview3 = document.getElementById('preview3');
-            const canvas3 = document.createElement('canvas');
-            canvas3.width = 280; canvas3.height = 120;
-            preview3.appendChild(canvas3);
-            const ctx3 = canvas3.getContext('2d');
-            ctx3.imageSmoothingEnabled = false;
-            drawFighterPreview(canvas3, ctx3);
-        };
-
-        // -------------------------------------------------
-        // Load game
-        // -------------------------------------------------
-        function loadGame(url) {
-            window.location.href = url;
-        }
-
-        // Prevent zoom
-        document.addEventListener('gesturestart', e => e.preventDefault());
-    </script>
+function loadGame(url) { window.location.href = url; }
+document.addEventListener('gesturestart', e => e.preventDefault());
+</script>
 </body>
 </html>
