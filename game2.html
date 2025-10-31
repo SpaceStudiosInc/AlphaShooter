@@ -1,15 +1,14 @@
-
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bomber</title>
+<title>Bomber - Black & White</title>
 <style>
   :root{
     --bg:#000;
     --panel:#fff;
-    --accent:#ffd700;
+    --accent:#888;
   }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:system-ui,Segoe UI,Roboto,monospace}
@@ -30,8 +29,7 @@
     canvas{height:480px}
     #mobileControls{display:flex}
   }
-  /* small neat border around canvas content */
-  .border-guide{position:absolute;inset:0;pointer-events:none;border:4px dashed rgba(255,255,255,0.02)}
+  .border-guide{position:absolute;inset:0;pointer-events:none;border:4px dashed rgba(255,255,255,0.05)}
 </style>
 </head>
 <body>
@@ -40,14 +38,12 @@
     <div id="gameContainer">
       <canvas id="c"></canvas>
 
-      <!-- HUD -->
       <div id="hud">
         <div class="line" id="scoreLabel">SCORE: 0</div>
         <div class="line" id="livesLabel">LIVES: 3</div>
         <div class="line" id="infoLabel">SHOOT: SPACE • BOMB: Z • PAUSE: P</div>
       </div>
 
-      <!-- Overlay UI (pause / game over) -->
       <div id="overlay" style="display:none">
         <div class="panel" id="overlayPanel">
           <div id="overlayTitle" style="font-size:22px;margin-bottom:10px">PAUSED</div>
@@ -55,20 +51,6 @@
             <button id="resumeBtn">Resume</button>
             <button id="restartBtn">Restart</button>
           </div>
-        </div>
-      </div>
-
-      <!-- Mobile controls (left/right/up/down, shoot, bomb) -->
-      <div id="mobileControls" style="display:none">
-        <div class="touchGroup">
-          <div class="touchBtn" id="btnLeft">◀</div>
-          <div class="touchBtn" id="btnUp">▲</div>
-          <div class="touchBtn" id="btnDown">▼</div>
-          <div class="touchBtn" id="btnRight">▶</div>
-        </div>
-        <div class="touchGroup">
-          <div class="touchBtn" id="btnShoot">SHOOT</div>
-          <div class="touchBtn" id="btnBomb">BOMB</div>
         </div>
       </div>
 
@@ -92,7 +74,6 @@ resizeCanvas();
 const W = () => canvas.width / devicePixelRatio;
 const H = () => canvas.height / devicePixelRatio;
 
-// --- Game State ---
 let running = true;
 let paused = false;
 let score = 0;
@@ -100,14 +81,13 @@ let lives = 3;
 let level = 1;
 let tick = 0;
 
-// --- Player ---
 const player = {
   x: 0, y: 0, w: 34, h: 24,
   speed: 210,
   bullets: [],
   bombs: [],
   fireRate: 0.3,
-  bombRate: 1,5,
+  bombRate: 0.8,
   fireTimer: 0,
   bombTimer: 0
 };
@@ -117,7 +97,6 @@ function resetPlayerPosition(){
 }
 resetPlayerPosition();
 
-// --- Enemies ---
 let enemies = [];
 function spawnWave(){
   const count = Math.min(8 + level, 16);
@@ -139,21 +118,20 @@ function rectsOverlap(a,b){
   return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
 }
 
-// --- Background (grass field with variation) ---
-const grassPatternCanvas = document.createElement('canvas');
-grassPatternCanvas.width = 128;
-grassPatternCanvas.height = 128;
-const gctx = grassPatternCanvas.getContext('2d');
+// Grayscale noise background
+const patternCanvas = document.createElement('canvas');
+patternCanvas.width = 128;
+patternCanvas.height = 128;
+const gctx = patternCanvas.getContext('2d');
 for(let y=0;y<128;y++){
   for(let x=0;x<128;x++){
-    const g = 40 + Math.floor(Math.random()*80);
-    gctx.fillStyle = `rgb(${g},${100+Math.random()*80|0},${40+Math.random()*40|0})`;
+    const g = 30 + Math.floor(Math.random()*120);
+    gctx.fillStyle = `rgb(${g},${g},${g})`;
     gctx.fillRect(x,y,1,1);
   }
 }
-const grassPattern = ctx.createPattern(grassPatternCanvas, 'repeat');
+const bgPattern = ctx.createPattern(patternCanvas, 'repeat');
 
-// --- Input ---
 const keys = {};
 window.addEventListener('keydown', e => {
   if(e.key==='p' || e.key==='P'){ togglePause(); return; }
@@ -162,7 +140,6 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => keys[e.key]=false);
 
-// --- UI ---
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlayTitle');
 document.getElementById('resumeBtn').addEventListener('click', ()=>togglePause(false));
@@ -180,7 +157,6 @@ function restartGame(){
   paused=false; overlay.style.display='none';
 }
 
-// --- Shooting ---
 function fireBullet(){
   if(player.fireTimer>0) return;
   player.fireTimer = player.fireRate;
@@ -205,7 +181,6 @@ function fireBombForward(){
   });
 }
 
-// --- Game Loop ---
 let lastTime = performance.now();
 function gameLoop(now){
   if(!running) return;
@@ -221,7 +196,6 @@ function update(dt){
   player.fireTimer = Math.max(0, player.fireTimer - dt);
   player.bombTimer = Math.max(0, player.bombTimer - dt);
 
-  // Movement
   const move = {x:0,y:0};
   if(keys['ArrowLeft']) move.x -= 1;
   if(keys['ArrowRight']) move.x += 1;
@@ -238,19 +212,16 @@ function update(dt){
   if(keys[' '] || keys['Spacebar'] || keys['Space']) fireBullet();
   if(keys['z'] || keys['Z']) fireBombForward();
 
-  // Bullets
   for(let i=player.bullets.length-1;i>=0;i--){
     const b=player.bullets[i];
     b.y += b.vy*dt;
     if(b.y + b.h < -20) player.bullets.splice(i,1);
   }
 
-  // Bombs (now forward missile with splash)
   for(let i=player.bombs.length-1;i>=0;i--){
     const b=player.bombs[i];
     b.y += b.vy*dt;
     if(!b.exploding){
-      // check collision with enemies
       for(let e of enemies){
         if(rectsOverlap(b,e)){
           b.exploding=true; b.vy=0; b.exRadius=0; break;
@@ -272,7 +243,6 @@ function update(dt){
     }
   }
 
-  // Enemies
   for(let i=enemies.length-1;i>=0;i--){
     const e=enemies[i];
     e.y += e.vy*dt;
@@ -280,7 +250,6 @@ function update(dt){
     if(e.dead || e.y>H()+40) enemies.splice(i,1);
   }
 
-  // Bullet collisions
   for(let bi=player.bullets.length-1;bi>=0;bi--){
     const b=player.bullets[bi];
     for(let ei=enemies.length-1;ei>=0;ei--){
@@ -294,7 +263,6 @@ function update(dt){
     }
   }
 
-  // Enemy collisions with player
   for(let i=enemies.length-1;i>=0;i--){
     const e=enemies[i];
     if(rectsOverlap(player,e)){
@@ -303,7 +271,6 @@ function update(dt){
     }
   }
 
-  // Respawn waves
   if(enemies.length===0){ level++; spawnWave(); }
 
   document.getElementById('scoreLabel').textContent = `SCORE: ${score}`;
@@ -315,7 +282,6 @@ function playerHit(){
   resetPlayerPosition();
   if(lives<=0) gameOver();
 }
-
 function gameOver(){
   paused=true;
   overlay.style.display='flex';
@@ -324,71 +290,62 @@ function gameOver(){
 
 // --- DRAW ---
 function draw(){
-  // background grass
-  ctx.fillStyle = grassPattern;
+  ctx.fillStyle = bgPattern;
   ctx.fillRect(0,0,W(),H());
-
-  // slight parallax dark bands
-  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
   for(let i=0;i<H();i+=40){ ctx.fillRect(0,i,W(),2); }
 
-  // enemies (people heads)
+  // enemies
   for(let e of enemies){
     ctx.save();
     ctx.translate(e.x+e.w/2, e.y+e.h/2);
-    // shadow
     ctx.beginPath();
-    ctx.fillStyle='rgba(0,0,0,0.2)';
+    ctx.fillStyle='rgba(255,255,255,0.15)';
     ctx.arc(2,2,10,0,Math.PI*2);
     ctx.fill();
-    // body
     ctx.beginPath();
-    ctx.fillStyle='#664422';
+    ctx.fillStyle='#888';
     ctx.arc(0,0,8,0,Math.PI*2);
     ctx.fill();
-    // head highlight
     ctx.beginPath();
-    ctx.fillStyle='#ffcc99';
+    ctx.fillStyle='#ccc';
     ctx.arc(0,-3,4,0,Math.PI*2);
     ctx.fill();
     ctx.restore();
   }
 
   // bullets
-  ctx.fillStyle='#aaf';
+  ctx.fillStyle='#fff';
   for(let b of player.bullets) ctx.fillRect(b.x,b.y,b.w,b.h);
 
-  // bombs / forward missiles
+  // bombs
   for(let b of player.bombs){
     if(!b.exploding){
-      ctx.fillStyle='#ffcc44';
+      ctx.fillStyle='#ddd';
       ctx.fillRect(b.x,b.y,b.w,b.h);
     } else {
       ctx.beginPath();
-      ctx.fillStyle='rgba(255,140,0,0.8)';
+      ctx.fillStyle='rgba(255,255,255,0.4)';
       ctx.arc(b.x+b.w/2,b.y+b.h/2,b.exRadius,0,Math.PI*2);
       ctx.fill();
     }
   }
 
-  // player drone
   drawPlayerDrone();
 
-  // lives
   for(let i=0;i<lives;i++){
-    const px=10+i*26, py=36;
-    drawSmallShip(px,py);
+    drawSmallShip(10+i*26,36);
   }
 }
 
 function drawPlayerDrone(){
   const x=player.x, y=player.y, w=player.w, h=player.h;
-  ctx.fillStyle='#cceeff';
+  ctx.fillStyle='#eee';
   roundRect(ctx,x,y,w,h,10,true,false);
   ctx.fillStyle='#222';
   ctx.beginPath(); ctx.arc(x+w/2,y+h+4,4,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#555'; ctx.lineWidth=1; ctx.stroke();
-  ctx.strokeStyle='#888'; ctx.lineWidth=3;
+  ctx.strokeStyle='#666'; ctx.lineWidth=1; ctx.stroke();
+  ctx.strokeStyle='#aaa'; ctx.lineWidth=3;
   ctx.beginPath();
   ctx.moveTo(x+6,y+4); ctx.lineTo(x-10,y-10);
   ctx.moveTo(x+w-6,y+4); ctx.lineTo(x+w+10,y-10);
@@ -398,7 +355,7 @@ function drawPlayerDrone(){
   ctx.fillStyle='#000';
   drawPropeller(x-12,y-12); drawPropeller(x+w+12,y-12);
   drawPropeller(x-12,y+h+12); drawPropeller(x+w+12,y+h+12);
-  ctx.fillStyle='#66aaff';
+  ctx.fillStyle='#fff';
   ctx.beginPath(); ctx.arc(x+w/2,y+h/2-4,6,0,Math.PI*2); ctx.fill();
 }
 function drawPropeller(px,py){
@@ -407,9 +364,9 @@ function drawPropeller(px,py){
   ctx.restore();
 }
 function drawSmallShip(x,y){
-  ctx.fillStyle='#88ffdd';
+  ctx.fillStyle='#fff';
   ctx.fillRect(x,y,16,8);
-  ctx.fillStyle='#004466';
+  ctx.fillStyle='#333';
   ctx.fillRect(x+6,y+2,4,4);
 }
 function roundRect(ctx,x,y,w,h,r,fill,stroke){
@@ -427,6 +384,5 @@ function roundRect(ctx,x,y,w,h,r,fill,stroke){
 function init(){ resetPlayerPosition(); lastTime=performance.now(); requestAnimationFrame(gameLoop); }
 init();
 </script>
-
 </body>
 </html>
