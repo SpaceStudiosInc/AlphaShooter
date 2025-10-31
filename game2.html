@@ -1,372 +1,617 @@
-<!DOCTYPE html>
+<!-- Xevious-like vertical shooter
+     - Player: move left/right/up/down, shoot air (SPACE), drop bomb (Z)
+     - Scrolling starfield
+     - Air enemies (destroy with bullets)
+     - Ground targets (destroy with bombs)
+     - Score, lives, pause, restart
+     - Mobile on-screen controls included
+     Labelled and commented for clarity.
+-->
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Drone Strike</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Xevious-like — Arcade Shooter</title>
 <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#222;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Courier New',monospace;color:#fff;overflow:hidden;}
-    #gameContainer{position:relative;max-width:100vw;max-height:100vh;}
-    canvas{border:3px solid #444;background:#87CEEB;display:block;max-width:100%;max-height:100vh;}
-    #ui{position:absolute;top:10px;left:10px;font-size:18px;color:#222;text-shadow:1px 1px 2px #fff;z-index:10;}
-    #startScreen,#gameOverScreen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,0.9);z-index:20;}
-    .hidden{display:none !important;}
-    h1{font-size:48px;color:#ffcc00;margin-bottom:20px;text-shadow:0 0 15px #ff9900;}
-    .btn{padding:15px 40px;font-size:20px;background:#ffcc00;border:none;color:#000;cursor:pointer;font-weight:bold;margin:10px;transition:all .3s;touch-action:manipulation;}
-    .btn:hover{background:#ffeb3b;transform:scale(1.1);}
-    .instructions{margin-top:30px;text-align:center;color:#ddd;font-size:14px;}
-    .instructions div{margin:5px 0;}
-    #mobileControls{position:absolute;bottom:20px;left:0;right:0;display:none;justify-content:space-between;padding:0 20px;z-index:15;}
-    #mobileControls.active{display:flex;}
-    .controlGroup{display:flex;flex-direction:column;gap:10px;}
-    .dpad{display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px;gap:5px;}
-    .controlBtn{background:rgba(255,255,255,.3);border:2px solid #fff;color:#fff;font-size:24px;font-weight:bold;border-radius:10px;touch-action:manipulation;user-select:none;}
-    .controlBtn:active{background:rgba(255,255,255,.6);}
-    .dpad .controlBtn:nth-child(1){grid-column:2;grid-row:1;}
-    .dpad .controlBtn:nth-child(2){grid-column:1;grid-row:2;}
-    .dpad .controlBtn:nth-child(3){grid-column:3;grid-row:2;}
-    .dpad .controlBtn:nth-child(4){grid-column:2;grid-row:3;}
-    .fireButtons{display:flex;flex-direction:column;gap:10px;}
-    .fireBtn{width:90px;height:90px;background:rgba(255,0,0,.4);border:3px solid #f00;color:#fff;font-size:16px;font-weight:bold;border-radius:50%;touch-action:manipulation;user-select:none;display:flex;align-items:center;justify-content:center;text-align:center;}
-    .fireBtn:active{background:rgba(255,0,0,.8);}
-    @media(max-width:768px){h1{font-size:32px;}.instructions{font-size:12px;}}
+  :root{
+    --bg:#000;
+    --panel:#fff;
+    --accent:#ffd700;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:#fff;font-family:system-ui,Segoe UI,Roboto,monospace}
+  #wrapper{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px;}
+  #gameContainer{width:100%;max-width:900px;border:6px solid var(--panel);background:#000;position:relative}
+  canvas{display:block;width:100%;height:640px;background:#000}
+  #hud{position:absolute;left:10px;top:10px;color:#fff;pointer-events:none}
+  #hud .line{margin-bottom:6px}
+  #score{font-weight:700}
+  #overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:auto}
+  .panel{background:var(--panel);color:#000;padding:18px;border:6px solid #000;text-align:center}
+  button{cursor:pointer;padding:8px 14px;font-weight:700}
+  #mobileControls{display:none;position:absolute;left:0;right:0;bottom:12px;justify-content:space-between;padding:0 18px;pointer-events:auto}
+  .touchGroup{display:flex;gap:8px}
+  .touchBtn{background:#fff;border:3px solid #000;padding:12px 18px;border-radius:8px;color:#000;font-weight:800;user-select:none}
+  .touchBtn:active{transform:translateY(1px)}
+  @media(max-width:720px){
+    canvas{height:480px}
+    #mobileControls{display:flex}
+  }
+  /* small neat border around canvas content */
+  .border-guide{position:absolute;inset:0;pointer-events:none;border:4px dashed rgba(255,255,255,0.02)}
 </style>
 </head>
 <body>
-<div id="gameContainer">
-    <canvas id="gameCanvas" width="600" height="800"></canvas>
-    <div id="ui">
-        <div>SCORE: <span id="score">0</span></div>
-        <div>LIVES: <span id="lives">3</span></div>
-    </div>
-    <div id="mobileControls">
-        <div class="controlGroup">
-            <div class="dpad">
-                <button class="controlBtn" data-key="left">←</button>
-                <button class="controlBtn" data-key="up">↑</button>
-                <button class="controlBtn" data-key="down">↓</button>
-                <button class="controlBtn" data-key="right">→</button>
-            </div>
+  <div id="wrapper">
+    <h2 style="color:#fff;margin:0">Xevious-like — Vertical Shooter (labeled & commented)</h2>
+    <div id="gameContainer">
+      <canvas id="c"></canvas>
+
+      <!-- HUD -->
+      <div id="hud">
+        <div class="line" id="scoreLabel">SCORE: 0</div>
+        <div class="line" id="livesLabel">LIVES: 3</div>
+        <div class="line" id="infoLabel">SHOOT: SPACE • BOMB: Z • PAUSE: P</div>
+      </div>
+
+      <!-- Overlay UI (pause / game over) -->
+      <div id="overlay" style="display:none">
+        <div class="panel" id="overlayPanel">
+          <div id="overlayTitle" style="font-size:22px;margin-bottom:10px">PAUSED</div>
+          <div style="display:flex;gap:12px;justify-content:center">
+            <button id="resumeBtn">Resume</button>
+            <button id="restartBtn">Restart</button>
+          </div>
         </div>
-        <div class="fireButtons">
-            <button class="fireBtn" data-key="bomb">DROP<br>BOMB</button>
+      </div>
+
+      <!-- Mobile controls (left/right/up/down, shoot, bomb) -->
+      <div id="mobileControls" style="display:none">
+        <div class="touchGroup">
+          <div class="touchBtn" id="btnLeft">◀</div>
+          <div class="touchBtn" id="btnUp">▲</div>
+          <div class="touchBtn" id="btnDown">▼</div>
+          <div class="touchBtn" id="btnRight">▶</div>
         </div>
-    </div>
-    <div id="startScreen">
-        <h1>DRONE STRIKE</h1>
-        <button class="btn" onclick="startGame()">START MISSION</button>
-        <div class="instructions">
-            <div>← → ↑ ↓ or WASD – MOVE DRONE</div>
-            <div>SPACE or X – DROP BOMB</div>
-            <div>Target enemies scrolling from top. 1 second delayed strike!</div>
+        <div class="touchGroup">
+          <div class="touchBtn" id="btnShoot">SHOOT</div>
+          <div class="touchBtn" id="btnBomb">BOMB</div>
         </div>
+      </div>
+
+      <div class="border-guide"></div>
     </div>
-    <div id="gameOverScreen" class="hidden">
-        <h1>MISSION FAILED</h1>
-        <div style="font-size:32px;margin:20px;">FINAL SCORE: <span id="finalScore">0</span></div>
-        <button class="btn" onclick="startGame()">RETRY</button>
-    </div>
-</div>
+  </div>
+
 <script>
-/* ---------- GLOBALS ---------- */
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-let gameState = 'start';
-let score = 0, lives = 3;
-const player = { x: canvas.width / 2, y: 120, width: 44, height: 44, speed: 5 };
-let keys = {}, bombs = [], groundEnemies = [], explosions = [];
-let bombCooldown = 0;
-let missCount = 0;
-const MAX_MISSES = 8;
-const GROUND_Y = canvas.height - 60;  // explosion line
-let scrollY = 0;                      // background scroll
-const SCROLL_SPEED = 2.5;
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-if (isMobile) document.getElementById('mobileControls').classList.add('active');
+/* ------------------------------
+   Xevious-like game implementation
+   Labelled sections: Setup, Entities, Input, Game Loop, Draw, Collisions, UI.
+   ------------------------------ */
 
-/* ---------- INPUT ---------- */
-document.addEventListener('keydown', e => {
-    keys[e.key.toLowerCase()] = true;
-    if ((e.key === ' ' || e.key.toLowerCase() === 'x') && gameState === 'playing' && bombCooldown <= 0) dropBomb();
-});
-document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-function touchStart(e) { e.preventDefault(); const k = this.dataset.key; if (k === 'bomb') dropBomb(); else keys[k] = true; }
-function touchEnd(e) { e.preventDefault(); const k = this.dataset.key; if (k !== 'bomb') keys[k] = false; }
-document.querySelectorAll('.controlBtn,.fireBtn').forEach(b => {
-    b.addEventListener('touchstart', touchStart);
-    b.addEventListener('touchend', touchEnd);
-});
+//////////////////////////
+// SETUP & CONSTANTS
+//////////////////////////
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
 
-/* ---------- GAME FLOW ---------- */
-function startGame() {
-    gameState = 'playing'; score = 0; lives = 3; missCount = 0;
-    player.x = canvas.width / 2; player.y = 120;
-    bombs = []; groundEnemies = []; explosions = []; scrollY = 0;
-    bombCooldown = 0;
-    document.getElementById('startScreen').classList.add('hidden');
-    document.getElementById('gameOverScreen').classList.add('hidden');
-    updateUI();
-    requestAnimationFrame(gameLoop);
+function resizeCanvas(){
+  // Keep resolution high for crispness
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.max(640, Math.floor(rect.width * devicePixelRatio));
+  canvas.height = Math.floor(rect.height * devicePixelRatio);
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
 }
-function gameOver() {
-    gameState = 'gameover';
-    document.getElementById('finalScore').textContent = score;
-    document.getElementById('gameOverScreen').classList.remove('hidden');
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+const W = () => canvas.width / devicePixelRatio;
+const H = () => canvas.height / devicePixelRatio;
+
+const GROUND_Y = () => (H() - 80); // ground baseline for ground targets
+
+// Game state
+let running = true;
+let paused = false;
+let score = 0;
+let lives = 3;
+let level = 1;
+let tick = 0;
+
+//////////////////////////
+// PLAYER (Solvalou-like)
+//////////////////////////
+const player = {
+  x: 0,
+  y: 0,
+  w: 34,
+  h: 24,
+  speed: 210, // pixels/sec
+  bullets: [],
+  bombs: [],
+  fireRate: 0.12, // seconds between bullets
+  bombRate: 0.6,
+  fireTimer: 0,
+  bombTimer: 0
+};
+
+function resetPlayerPosition(){
+  player.x = Math.round(W()/2 - player.w/2);
+  player.y = Math.round(H() - player.h - 120);
 }
-function updateUI() {
-    document.getElementById('score').textContent = score;
-    document.getElementById('lives').textContent = lives;
+resetPlayerPosition();
+
+//////////////////////////
+// ENEMIES & GROUND TARGETS
+//////////////////////////
+let enemies = [];       // air enemies
+let groundTargets = []; // ground targets you bomb
+let bullets = [];       // all bullets (player)
+let enemyBullets = [];  // enemy bullets (optional)
+let bombs = [];         // dropped bombs
+
+// Utility: rectangle collision
+function rectsOverlap(a,b){
+  return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
 }
 
-/* ---------- PLAYER (free movement in top half) ---------- */
-function updatePlayer() {
-    const maxY = canvas.height * 0.45;
-    if ((keys['arrowleft'] || keys['a'] || keys['left']) && player.x > 25) player.x -= player.speed;
-    if ((keys['arrowright'] || keys['d'] || keys['right']) && player.x < canvas.width - 25) player.x += player.speed;
-    if ((keys['arrowup'] || keys['w'] || keys['up']) && player.y > 60) player.y -= player.speed;
-    if ((keys['arrowdown'] || keys['s'] || keys['down']) && player.y < maxY) player.y += player.speed;
-    if (bombCooldown > 0) bombCooldown--;
+//////////////////////////
+// STARFIELD (scrolling background)
+//////////////////////////
+const stars = [];
+for(let i=0;i<120;i++){
+  stars.push({x: Math.random()*W(), y: Math.random()*H(), s: Math.random()*1.4 + 0.6});
 }
 
-/* ---------- BOMB (drops, falls, scales down, explodes after 1s) ---------- */
-function dropBomb() {
-    bombs.push({
-        x: player.x,
-        startY: player.y + 30,
-        life: 10,
-        maxLife: 200
+//////////////////////////
+// SPAWN LOGIC
+//////////////////////////
+function spawnWave(){
+  // Spawn some air enemies and ground targets depending on level
+  const enemyCount = Math.min(6 + level, 14);
+  for(let i=0;i<enemyCount;i++){
+    const ex = Math.random() * (W() - 60) + 30;
+    const ey = -Math.random()*H() - i*60;
+    const speed = 40 + Math.random()*40 + level*6;
+    enemies.push({
+      x: ex, y: ey, w: 28, h: 20,
+      vx: (Math.random()>0.5?1:-1) * (10 + Math.random()*20),
+      vy: speed/10,
+      hp: 1 + Math.floor(level/4),
+      type: 'zako', // simple enemy
+      oscillation: Math.random()*0.8
     });
-    bombCooldown = 18;
-}
-function updateBombs() {
-    const alive = [];
-    for (const b of bombs) {
-        b.life--;
-        if (b.life > 0) {
-            const prog = 1 - b.life / b.maxLife;
-            b.y = b.startY + prog * (GROUND_Y - b.startY);
-            alive.push(b);
-        } else {
-            createExplosion(b.x, GROUND_Y, 50);
-            let hit = false;
-            for (let i = groundEnemies.length - 1; i >= 0; i--) {
-                const e = groundEnemies[i];
-                if (e.destroyed) continue;
-                const dist = Math.hypot(b.x - e.x, GROUND_Y - e.y);
-                if (dist < 40) {
-                    e.hp--;
-                    if (e.hp <= 0) {
-                        e.destroyed = true;
-                        score += e.type === 'tank' ? 300 : e.type === 'building' ? 200 : 150;
-                        updateUI();
-                    }
-                    hit = true;
-                    break;
-                }
-            }
-            if (!hit) {
-                missCount++;
-                if (missCount >= MAX_MISSES) {
-                    lives--; missCount = 0; updateUI();
-                    if (lives <= 0) gameOver();
-                }
-            }
-        }
-    }
-    bombs = alive;
-}
+  }
 
-/* ---------- GROUND ENEMIES (spawn at top, scroll down) ---------- */
-function spawnEnemy() {
-    const types = ['soldier', 'building', 'tank'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    groundEnemies.push({
-        x: Math.random() * (canvas.width - 60) + 30,
-        y: -80,
-        type,
-        hp: type === 'soldier' ? 1 : type === 'building' ? 4 : 2,
-        destroyed: false,
-        speed: 2
+  // Ground targets: spaced across ground
+  const groundCount = Math.min(6 + Math.floor(level/2), 12);
+  const gap = Math.max(120, W()/groundCount);
+  const startX = 60;
+  for(let i=0;i<groundCount;i++){
+    const gx = startX + i * gap + (Math.random()*30 - 15);
+    groundTargets.push({
+      x: gx, y: GROUND_Y(), w: 36, h: 18,
+      hp: 1, destroyed: false
     });
+  }
 }
-function updateEnemies() {
-    const alive = [];
-    for (const e of groundEnemies) {
-        e.y += e.speed + SCROLL_SPEED;
-        if (e.y < canvas.height + 100) {
-            if (!e.destroyed) alive.push(e);
-        }
+
+spawnWave();
+
+//////////////////////////
+// INPUT HANDLING
+//////////////////////////
+const keys = {};
+window.addEventListener('keydown', e => {
+  if(e.key==='p' || e.key==='P'){ togglePause(); return; }
+  keys[e.key] = true;
+  // prevent page from scrolling on space
+  if([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+/* Mobile buttons */
+function enableMobileControls(){
+  const mc = document.getElementById('mobileControls');
+  mc.style.display = window.innerWidth <= 720 ? 'flex' : 'none';
+  const bind = (id,k,down=true) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('touchstart', ev=>{ ev.preventDefault(); if(down) keys[k]=true; else keys[k]=false;});
+    el.addEventListener('touchend', ev=>{ ev.preventDefault(); keys[k]=false;});
+    el.addEventListener('mousedown', ev=>{ ev.preventDefault(); if(down) keys[k]=true; });
+    el.addEventListener('mouseup', ev=>{ ev.preventDefault(); keys[k]=false; });
+  };
+  bind('btnLeft','ArrowLeft');
+  bind('btnRight','ArrowRight');
+  bind('btnUp','ArrowUp');
+  bind('btnDown','ArrowDown');
+  // fire
+  document.getElementById('btnShoot').addEventListener('touchstart', ev=>{ ev.preventDefault(); keys[' '] = true; setTimeout(()=>keys[' ']=false, 140) });
+  document.getElementById('btnShoot').addEventListener('mousedown', ev=>{ ev.preventDefault(); keys[' '] = true; setTimeout(()=>keys[' ']=false, 140) });
+  document.getElementById('btnBomb').addEventListener('touchstart', ev=>{ ev.preventDefault(); keys['z'] = true; setTimeout(()=>keys['z']=false, 220) });
+  document.getElementById('btnBomb').addEventListener('mousedown', ev=>{ ev.preventDefault(); keys['z'] = true; setTimeout(()=>keys['z']=false, 220) });
+}
+enableMobileControls();
+window.addEventListener('resize', enableMobileControls);
+
+//////////////////////////
+// UI controls (pause/resume/restart)
+//////////////////////////
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlayTitle');
+document.getElementById('resumeBtn').addEventListener('click', ()=>togglePause(false));
+document.getElementById('restartBtn').addEventListener('click', restartGame);
+
+function togglePause(forcePause){
+  if(typeof forcePause === 'boolean') paused = forcePause;
+  else paused = !paused;
+  overlay.style.display = paused ? 'flex' : 'none';
+  overlayTitle.textContent = paused ? 'PAUSED' : 'RESUME';
+}
+
+function restartGame(){
+  score = 0; lives = 3; level = 1; tick = 0;
+  enemies = []; groundTargets = []; bullets = []; bombs = []; enemyBullets = [];
+  resetPlayerPosition();
+  spawnWave();
+  paused = false; overlay.style.display = 'none';
+}
+
+//////////////////////////
+// SHOOTING / BOMBING
+//////////////////////////
+function fireBullet(){
+  if(player.fireTimer > 0) return;
+  player.fireTimer = player.fireRate;
+  bullets.push({
+    x: player.x + player.w/2 - 4,
+    y: player.y - 6,
+    w: 8, h: 12,
+    vy: -460, // pixels/sec
+    dmg: 1
+  });
+}
+
+function dropBomb(){
+  if(player.bombTimer > 0) return;
+  player.bombTimer = player.bombRate;
+  bombs.push({
+    x: player.x + player.w/2 - 6,
+    y: player.y + player.h + 4,
+    w: 12, h: 14,
+    vy: 20,
+    exploding: false,
+    timer: 0
+  });
+}
+
+//////////////////////////
+// PHYSICS & UPDATE
+//////////////////////////
+let lastTime = performance.now();
+function gameLoop(now){
+  if(!running) return;
+  const dt = Math.min(0.05, (now - lastTime)/1000);
+  lastTime = now;
+  if(!paused){
+    update(dt);
+    draw();
+  }
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+function update(dt){
+  tick += dt;
+
+  // timers
+  player.fireTimer = Math.max(0, player.fireTimer - dt);
+  player.bombTimer = Math.max(0, player.bombTimer - dt);
+
+  // Player movement
+  const move = {x:0,y:0};
+  if(keys['ArrowLeft']) move.x -= 1;
+  if(keys['ArrowRight']) move.x += 1;
+  if(keys['ArrowUp']) move.y -= 1;
+  if(keys['ArrowDown']) move.y += 1;
+  const len = Math.hypot(move.x, move.y);
+  if(len>0){
+    player.x += (move.x/len) * player.speed * dt;
+    player.y += (move.y/len) * player.speed * dt;
+  }
+  // Keep in screen
+  player.x = Math.max(8, Math.min(W() - player.w - 8, player.x));
+  player.y = Math.max(8, Math.min(H() - player.h - 130, player.y));
+
+  // Shooting input
+  if(keys[' '] || keys['Spacebar'] || keys['Space']) fireBullet();
+  if(keys['z'] || keys['Z']) dropBomb();
+
+  // Update bullets
+  for(let i=bullets.length-1;i>=0;i--){
+    const b = bullets[i];
+    b.y += b.vy * dt;
+    if(b.y + b.h < -20) bullets.splice(i,1);
+  }
+
+  // Update bombs (gravity + fall + detonate near ground)
+  for(let i=bombs.length-1;i>=0;i--){
+    const b = bombs[i];
+    b.vy += 800 * dt; // gravity accelerate
+    b.y += b.vy * dt;
+    if(b.y > GROUND_Y() - 4 && !b.exploding){
+      // explode on hitting ground
+      b.exploding = true;
+      b.timer = 0;
+      b.vy = 0;
+      b.exRadius = 0;
     }
-    groundEnemies = alive;
-    if (Math.random() < 0.003) spawnEnemy(); // spawn rate
-}
-
-/* ---------- EXPLOSIONS ---------- */
-function createExplosion(x, y, size = 50) {
-    explosions.push({ x, y, size, life: 25, maxLife: 25 });
-}
-function updateExplosions() {
-    explosions = explosions.filter(e => --e.life > 0);
-}
-
-/* ---------- SCROLLING GRASSY FIELD ---------- */
-function drawBackground() {
-    scrollY += SCROLL_SPEED;
-    if (scrollY > 400) scrollY = 0;
-
-    // Sky
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, '#87CEEB');
-    grad.addColorStop(0.7, '#98D8C8');
-    grad.addColorStop(1, '#228B22');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Scrolling grass tiles
-    ctx.fillStyle = '#1a6b1a';
-    for (let gy = -128 + (scrollY % 128); gy < canvas.height; gy += 128) {
-        for (let gx = 0; gx < canvas.width; gx += 128) {
-            ctx.fillRect(gx, gy, 128, 128);
-            // grass blades
-            ctx.strokeStyle = '#2e8b2e';
-            ctx.lineWidth = 1.5;
-            for (let i = 0; i < 20; i++) {
-                const bx = gx + Math.random() * 128;
-                const by = gy + Math.random() * 128;
-                ctx.beginPath();
-                ctx.moveTo(bx, by);
-                ctx.lineTo(bx + Math.random() * 6 - 3, by - Math.random() * 20 - 10);
-                ctx.stroke();
+    if(b.exploding){
+      b.timer += dt;
+      b.exRadius = Math.min(80, b.exRadius + 140*dt);
+      if(b.timer > 0.18){
+        // apply damage to ground targets inside radius once
+        for(let g of groundTargets){
+          if(!g.destroyed){
+            const dx = (g.x + g.w/2) - (b.x + b.w/2);
+            const dy = (g.y + g.h/2) - (b.y + b.h/2);
+            const dist = Math.hypot(dx, dy);
+            if(dist <= b.exRadius){
+              g.hp -= 1;
+              if(g.hp <= 0) { g.destroyed = true; score += 200; }
             }
+          }
         }
+      }
+      if(b.timer > 0.45) bombs.splice(i,1);
     }
+  }
 
-    // Ground line (explosion level)
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, GROUND_Y);
-    ctx.lineTo(canvas.width, GROUND_Y);
-    ctx.stroke();
+  // Update enemies
+  for(let i=enemies.length-1;i>=0;i--){
+    const e = enemies[i];
+    // simple movement: downward + horizontal oscillation
+    e.y += (40 + level*6) * dt;
+    e.x += Math.sin(tick*2 + e.oscillation) * e.vx * dt * 0.7;
+
+    // remove if below screen
+    if(e.y > H() + 60) enemies.splice(i,1);
+  }
+
+  // Collisions: bullets -> enemies
+  for(let bi = bullets.length-1; bi>=0; bi--){
+    const b = bullets[bi];
+    for(let ei = enemies.length-1; ei>=0; ei--){
+      const e = enemies[ei];
+      if(rectsOverlap({x:b.x,y:b.y,w:b.w,h:b.h},{x:e.x,y:e.y,w:e.w,h:e.h})){
+        bullets.splice(bi,1);
+        e.hp -= b.dmg;
+        if(e.hp <= 0){
+          // enemy destroyed
+          score += 100;
+          enemies.splice(ei,1);
+        }
+        break;
+      }
+    }
+  }
+
+  // Collisions: bombs -> (handled via explosion radius earlier)
+
+  // Collisions: enemy hits player
+  for(let i=enemies.length-1;i>=0;i--){
+    const e = enemies[i];
+    if(rectsOverlap({x:player.x,y:player.y,w:player.w,h:player.h},{x:e.x,y:e.y,w:e.w,h:e.h})){
+      // player hit
+      enemies.splice(i,1);
+      playerHit();
+    }
+  }
+
+  // If wave cleared, increase level & spawn new wave
+  if(enemies.length === 0 && groundTargets.every(g=>g.destroyed)) {
+    level++;
+    spawnWave();
+  }
+
+  // Update HUD
+  document.getElementById('scoreLabel').textContent = `SCORE: ${score}`;
+  document.getElementById('livesLabel').textContent = `LIVES: ${lives}`;
+
+  // Reset single-shot keys for mobile-like behavior
+  // (space and z behave as short-press triggers)
+  if(keys[' '] === true && player.fireTimer > 0) keys[' '] = false;
+  if(keys['z'] === true && player.bombTimer > 0) keys['z'] = false;
 }
 
-/* ---------- DRAWING ---------- */
-function drawPlayer() {
+function playerHit(){
+  lives--;
+  // respawn player
+  resetPlayerPosition();
+  // small flash or invincibility could be added; here we simply continue
+  if(lives <= 0){
+    gameOver();
+  }
+}
+
+function gameOver(){
+  paused = true;
+  overlay.style.display = 'flex';
+  overlayTitle.textContent = 'GAME OVER';
+  document.getElementById('overlayPanel').querySelector('button').focus();
+}
+
+//////////////////////////
+// DRAWING
+//////////////////////////
+function draw(){
+  // clear
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0,0,W(),H());
+
+  // draw starfield (scrolling)
+  for(let s of stars){
+    s.y += 30/60; // slow downward scroll
+    if(s.y > H()) s.y = -2;
+    const size = s.s;
+    ctx.fillStyle = '#88c';
+    ctx.fillRect(s.x, s.y, size, size);
+  }
+
+  // draw parallax horizon ground (simple horizontal band)
+  ctx.fillStyle = '#223322';
+  ctx.fillRect(0, GROUND_Y() + 18, W(), H() - (GROUND_Y()+18));
+
+  // draw ground targets (pillars / antenna)
+  for(let g of groundTargets){
+    if(g.destroyed){
+      // rubble
+      ctx.fillStyle = '#444';
+      ctx.fillRect(g.x-4, g.y+6, g.w+8, g.h/2);
+    } else {
+      ctx.fillStyle = '#6b6bff';
+      ctx.fillRect(g.x, g.y - g.h, g.w, g.h);
+      // small antenna cap
+      ctx.fillStyle = '#ffd700';
+      ctx.fillRect(g.x + g.w/2 - 3, g.y - g.h - 6, 6, 6);
+    }
+  }
+
+  // draw bombs (falling and explosion)
+  for(let b of bombs){
+    if(!b.exploding){
+      ctx.fillStyle = '#ffcc44';
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+    } else {
+      // explosion circle
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,140,0,0.9)';
+      ctx.arc(b.x + b.w/2, b.y + b.h/2, b.exRadius, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // draw enemies
+  for(let e of enemies){
     ctx.save();
-    ctx.translate(player.x, player.y);
-    // Drone
-    ctx.fillStyle = '#444';
-    ctx.fillRect(-22, -22, 44, 44);
-    ctx.fillStyle = '#666';
-    ctx.fillRect(-12, -30, 24, 12);
-    // Propellers
-    ctx.strokeStyle = '#222';
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 4; i++) {
-        const [px, py] = [[-16, -12], [16, -12], [-16, 12], [16, 12]][i];
-        ctx.beginPath();
-        ctx.moveTo(px - 14, py);
-        ctx.lineTo(px + 14, py);
-        ctx.stroke();
-    }
-    // Camera
-    ctx.fillStyle = '#ff0000';
+    ctx.translate(e.x, e.y);
+    // draw simple fighter sprite
+    ctx.fillStyle = '#ff4444';
+    ctx.fillRect(-e.w/2 + e.w/2, 0, e.w, e.h); // quick center adjustment removed for clarity
+    // triangular nose
     ctx.beginPath();
-    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.moveTo(e.w/2, 0);
+    ctx.lineTo(e.w/2 + 8, e.h/2);
+    ctx.lineTo(e.w/2, e.h);
+    ctx.closePath();
     ctx.fill();
     ctx.restore();
+
+    // (draw bounding box for debugging) // optional
+    // ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.strokeRect(e.x,e.y,e.w,e.h);
+  }
+
+  // draw bullets
+  ctx.fillStyle = '#aaf';
+  for(let b of bullets){
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+  }
+
+  // draw player ship
+  drawPlayerShip();
+
+  // debug ground line
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, GROUND_Y());
+  ctx.lineTo(W(), GROUND_Y());
+  ctx.stroke();
+
+  // small HUD in canvas (score already in overlay)
+  // draw lives as small ships
+  for(let i=0;i<lives;i++){
+    const px = 10 + i*26;
+    const py = 36;
+    drawSmallShip(px, py);
+  }
 }
 
-function drawBombs() {
-    for (const b of bombs) {
-        const prog = 1 - b.life / b.maxLife;
-        const scale = 1 - prog * 0.8; // shrink to 20% at ground
-        ctx.save();
-        ctx.globalAlpha = 0.9;
-        ctx.translate(b.x, b.y);
-        ctx.scale(scale, scale);
-        // Bomb
-        ctx.fillStyle = '#333';
-        ctx.fillRect(-5, -10, 10, 20);
-        ctx.fillStyle = '#ff6600';
-        ctx.fillRect(-4, 8, 8, 6);
-        ctx.restore();
-    }
+function drawPlayerShip(){
+  const x = player.x, y = player.y, w = player.w, h = player.h;
+  // body
+  ctx.fillStyle = '#88ffdd';
+  roundRect(ctx, x, y, w, h, 6, true, false);
+  // cockpit
+  ctx.fillStyle = '#004466';
+  ctx.fillRect(x + w/2 - 6, y + 4, 12, 8);
+  // wings
+  ctx.fillStyle = '#66ccaa';
+  ctx.fillRect(x - 10, y + 6, 10, 6);
+  ctx.fillRect(x + w, y + 6, 10, 6);
 }
 
-function drawEnemies() {
-    const BASE_SCALE = 0.18;
-    for (const e of groundEnemies) {
-        if (e.destroyed) continue;
-        const distFromTop = e.y;
-        const scale = BASE_SCALE + (distFromTop / canvas.height) * 0.15; // grow slightly as they come closer
-        ctx.save();
-        ctx.translate(e.x, e.y);
-        ctx.scale(scale, scale);
-
-        if (e.type === 'soldier') {
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(-8, -25, 16, 25);
-            ctx.fillStyle = '#228B22';
-            ctx.fillRect(-6, -33, 12, 10);
-        } else if (e.type === 'building') {
-            ctx.fillStyle = '#555';
-            ctx.fillRect(-28, -38, 56, 38);
-            ctx.fillStyle = '#444';
-            ctx.fillRect(-22, -32, 44, 28);
-        } else { // tank
-            ctx.fillStyle = '#3a3a3a';
-            ctx.fillRect(-25, -20, 50, 20);
-            ctx.fillStyle = '#222';
-            ctx.fillRect(-18, -28, 36, 14);
-            ctx.fillStyle = '#ff0000';
-            ctx.beginPath();
-            ctx.arc(0, -22, 9, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        ctx.restore();
-    }
+function drawSmallShip(x,y){
+  ctx.fillStyle = '#88ffdd';
+  ctx.fillRect(x, y, 16, 8);
+  ctx.fillStyle = '#004466';
+  ctx.fillRect(x+6, y+2, 4, 4);
 }
 
-function drawExplosions() {
-    for (const e of explosions) {
-        const a = e.life / e.maxLife;
-        ctx.save();
-        ctx.globalAlpha = a;
-        ctx.translate(e.x, e.y);
-        const size = e.size * (1 + (1 - a) * 0.7);
-        ctx.fillStyle = '#ffaa00';
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ff4444';
-        ctx.beginPath();
-        ctx.arc(0, 0, size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-    ctx.globalAlpha = 1;
+function roundRect(ctx, x, y, w, h, r, fill, stroke){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+  if(fill) ctx.fill();
+  if(stroke) ctx.stroke();
 }
 
-/* ---------- MAIN LOOP ---------- */
-function gameLoop() {
-    if (gameState !== 'playing') return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+//////////////////////////
+// Simple auto-spawn if too few enemies
+//////////////////////////
+setInterval(()=>{
+  if(paused) return;
+  // occasionally spawn a solitary enemy
+  if(Math.random() < 0.15 && enemies.length < 10){
+    enemies.push({
+      x: Math.random()*(W()-60)+30,
+      y: -40,
+      w: 28, h: 20,
+      vx: (Math.random()>0.5?1:-1)*20,
+      vy: 24 + Math.random()*64 + level*6,
+      hp: 1,
+      type: 'zako',
+      oscillation: Math.random()*1.2
+    });
+  }
+}, 700);
 
-    drawBackground();
-    updatePlayer();
-    updateBombs();
-    updateEnemies();
-    updateExplosions();
+//////////////////////////
+// Helper: prevent accidental selection during touch
+//////////////////////////
+document.addEventListener('touchstart', (e)=>{ e.preventDefault(); }, {passive:false});
 
-    drawEnemies();
-    drawBombs();
-    drawExplosions();
-    drawPlayer();
+//////////////////////////
+// GAMEOVER / BUTTONS
+//////////////////////////
+document.getElementById('restartBtn').addEventListener('click', restartGame);
 
-    requestAnimationFrame(gameLoop);
+//////////////////////////
+// INITIAL TICKS
+//////////////////////////
+function init(){
+  resetPlayerPosition();
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
 }
+init();
+
 </script>
 </body>
 </html>
