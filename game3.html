@@ -483,7 +483,9 @@
         
         function drawFighter(fighter, isPlayer) {
             // Set color: dark gray for player, black for enemy
-            ctx.fillStyle = isPlayer ? '#444' : '#000';
+            cctx.fillStyle = '#fff';     // white fill
+            ctx.strokeStyle = '#000';   // black outline
+            ctx.lineWidth = 2;    
             
             // Body
             ctx.fillRect(fighter.x, fighter.y, fighter.width, fighter.height);
