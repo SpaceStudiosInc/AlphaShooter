@@ -30,7 +30,6 @@
                     cursor:pointer; width:100%; }
         .play-btn:active { background:#333; }
         footer { margin-top:50px; font-size:12px; color:#666; }
-
         /* Mobile */
         @media (max-width:768px){
             h1{font-size:28px;margin-bottom:30px;}
@@ -53,20 +52,22 @@
             <!-- Game 1 -->
             <div class="game-card" onclick="loadGame('game1.html')">
                 <div class="preview" id="preview1"></div>
-                <div class="game-title">GAME 1: RUNNER SHOOTER</div>
-                <div class="game-desc">
-                    
-                </div>
+                <div class="game-title">GAME 1: RUNNER</div>
+                <div class="game-desc">Endless run & gun action!</div>
                 <button class="play-btn">PLAY</button>
             </div>
-
-            <!-- Game 2 -->
+            <!-- Game 2 - Black & White -->
             <div class="game-card" onclick="loadGame('game2.html')">
                 <div class="preview" id="preview2"></div>
                 <div class="game-title">GAME 2: BOMBER</div>
-                <div class="game-desc">
-                    
-                </div>
+                <div class="game-desc">Drop bombs, destroy terrain!</div>
+                <button class="play-btn">PLAY</button>
+            </div>
+            <!-- Game 3 - New! -->
+            <div class="game-card" onclick="loadGame('game3.html')">
+                <div class="preview" id="preview3"></div>
+                <div class="game-title">GAME 3: OUT OF BULLETS</div>
+                <div class="game-desc">Defend Earth from asteroids!</div>
                 <button class="play-btn">PLAY</button>
             </div>
         </div>
@@ -75,17 +76,15 @@
 
     <script>
         // -------------------------------------------------
-        // Game 1 – Runner preview (unchanged)
+        // Game 1 – Runner preview
         // -------------------------------------------------
         function drawRunnerPreview(canvas, ctx) {
             let x = 0;
             function animate() {
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                // Ground
                 ctx.fillStyle = '#000';
                 ctx.fillRect(0, canvas.height - 10, canvas.width, 2);
-                // Runner
                 x = (x + 2) % (canvas.width + 20);
                 const runnerX = x < canvas.width ? x : x - canvas.width - 20;
                 ctx.fillRect(runnerX + 10, canvas.height - 30, 8, 16);
@@ -96,74 +95,157 @@
         }
 
         // -------------------------------------------------
-        // Game 2 – Bomber preview (new!)
+        // Game 2 – BOMBER (Black & White)
         // -------------------------------------------------
         function drawBomberPreview(canvas, ctx) {
             const w = canvas.width, h = canvas.height;
             let planeX = 30, planeY = 30;
-            let planeDir = 1;               // 1 = right, -1 = left
-            const bombs = [];               // {x, y, exploding, frame}
+            let planeDir = 1;
+            const bombs = [];
             let lastDrop = 0;
 
             function animate() {
-                // clear
                 ctx.fillStyle = '#fff';
                 ctx.fillRect(0, 0, w, h);
 
-                // sky background
-                ctx.fillStyle = '#aaddff';
-                ctx.fillRect(0, 0, w, h - 20);
-
-                // ground
-                ctx.fillStyle = '#8b5a2b';
+                // Ground
+                ctx.fillStyle = '#000';
                 ctx.fillRect(0, h - 20, w, 20);
 
-                // ----- plane -----
+                // Plane
                 planeX += planeDir * 1.5;
                 if (planeX > w - 40) planeDir = -1;
                 if (planeX < 10) planeDir = 1;
 
-                // plane body
-                ctx.fillStyle = '#555';
+                ctx.fillStyle = '#000';
                 ctx.fillRect(planeX, planeY, 30, 12);
-                // wings
                 ctx.fillRect(planeX + 5, planeY - 4, 20, 6);
                 ctx.fillRect(planeX + 5, planeY + 12, 20, 6);
-                // cockpit
-                ctx.fillStyle = '#0ff';
                 ctx.fillRect(planeX + 22, planeY + 2, 6, 6);
 
-                // ----- drop bomb occasionally -----
+                // Drop bomb
                 if (performance.now() - lastDrop > 800) {
                     bombs.push({x: planeX + 15, y: planeY + 12, exploding: false, frame: 0});
                     lastDrop = performance.now();
                 }
 
-                // ----- bombs & explosions -----
+                // Bombs & explosions
                 for (let i = bombs.length - 1; i >= 0; i--) {
                     const b = bombs[i];
                     if (!b.exploding) {
                         b.y += 3;
                         ctx.fillStyle = '#000';
                         ctx.fillRect(b.x - 3, b.y - 3, 6, 6);
-                        // hit ground?
                         if (b.y + 3 >= h - 20) {
                             b.exploding = true;
                             b.frame = 0;
-                            // crater
-                            ctx.fillStyle = '#543';
+                            ctx.fillStyle = '#000';
                             ctx.fillRect(b.x - 12, h - 22, 24, 4);
                         }
                     } else {
-                        // explosion animation (simple growing circle)
                         b.frame++;
                         const radius = b.frame * 1.2;
-                        ctx.fillStyle = `rgba(255,${150 - b.frame * 3},0,${1 - b.frame / 30})`;
+                        const alpha = 1 - b.frame / 30;
+                        ctx.fillStyle = `rgba(0,0,0,${alpha})`;
                         ctx.beginPath();
                         ctx.arc(b.x, h - 20, radius, 0, Math.PI * 2);
                         ctx.fill();
                         if (b.frame > 30) bombs.splice(i, 1);
                     }
+                }
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // -------------------------------------------------
+        // Game 3 – SPACE DEFENDER (New!)
+        // -------------------------------------------------
+        function drawSpaceDefenderPreview(canvas, ctx) {
+            const w = canvas.width, h = canvas.height;
+            let shipX = w / 2 - 10;
+            const lasers = [];
+            const asteroids = [];
+            let lastShot = 0;
+            let score = 0;
+
+            // Spawn asteroids
+            function spawnAsteroid() {
+                asteroids.push({
+                    x: Math.random() * (w - 20) + 10,
+                    y: -20,
+                    size: Math.random() * 10 + 10,
+                    speed: Math.random() * 1.5 + 1
+                });
+            }
+
+            // Initial asteroids
+            for (let i = 0; i < 3; i++) spawnAsteroid();
+            setInterval(spawnAsteroid, 2000);
+
+            function animate() {
+                // Clear
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, w, h);
+
+                // Stars
+                ctx.fillStyle = '#fff';
+                for (let i = 0; i < 30; i++) {
+                    const x = (i * 37 + Date.now() * 0.01) % w;
+                    const y = (i * 23 + Date.now() * 0.02) % h;
+                    ctx.fillRect(x, y, 1, 1);
+                }
+
+                // Ship
+                ctx.fillStyle = '#0f0';
+                ctx.fillRect(shipX, h - 30, 20, 15);
+                ctx.fillRect(shipX + 8, h - 35, 4, 10);
+
+                // Auto-shoot
+                if (performance.now() - lastShot > 400) {
+                    lasers.push({ x: shipX + 9, y: h - 35 });
+                    lastShot = performance.now();
+                }
+
+                // Lasers
+                for (let i = lasers.length - 1; i >= 0; i--) {
+                    const l = lasers[i];
+                    l.y -= 5;
+                    ctx.fillStyle = '#ff0';
+                    ctx.fillRect(l.x, l.y, 2, 8);
+                    if (l.y < 0) lasers.splice(i, 1);
+                }
+
+                // Asteroids
+                for (let i = asteroids.length - 1; i >= 0; i--) {
+                    const a = asteroids[i];
+                    a.y += a.speed;
+                    ctx.fillStyle = '#aaa';
+                    ctx.beginPath();
+                    ctx.arc(a.x, a.y, a.size, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Collision with laser
+                    for (let j = lasers.length - 1; j >= 0; j--) {
+                        const l = lasers[j];
+                        const dx = l.x - a.x;
+                        const dy = l.y - a.y;
+                        if (Math.sqrt(dx*dx + dy*dy) < a.size) {
+                            asteroids.splice(i, 1);
+                            lasers.splice(j, 1);
+                            score++;
+                            // Explosion
+                            for (let k = 0; k < 8; k++) {
+                                setTimeout(() => {
+                                    ctx.fillStyle = `rgba(255,100,0,${0.8 - k*0.1})`;
+                                    ctx.fillRect(a.x - 5, a.y - 5, 10, 10);
+                                }, k * 30);
+                            }
+                            break;
+                        }
+                    }
+
+                    if (a.y > h) asteroids.splice(i, 1);
                 }
 
                 requestAnimationFrame(animate);
@@ -172,10 +254,10 @@
         }
 
         // -------------------------------------------------
-        // Init both previews
+        // Init all previews
         // -------------------------------------------------
         window.onload = () => {
-            // ---- Game 1 ----
+            // Game 1
             const preview1 = document.getElementById('preview1');
             const canvas1 = document.createElement('canvas');
             canvas1.width = 280; canvas1.height = 120;
@@ -184,7 +266,7 @@
             ctx1.imageSmoothingEnabled = false;
             drawRunnerPreview(canvas1, ctx1);
 
-            // ---- Game 2 ----
+            // Game 2 (B&W)
             const preview2 = document.getElementById('preview2');
             const canvas2 = document.createElement('canvas');
             canvas2.width = 280; canvas2.height = 120;
@@ -192,6 +274,15 @@
             const ctx2 = canvas2.getContext('2d');
             ctx2.imageSmoothingEnabled = false;
             drawBomberPreview(canvas2, ctx2);
+
+            // Game 3 (New)
+            const preview3 = document.getElementById('preview3');
+            const canvas3 = document.createElement('canvas');
+            canvas3.width = 280; canvas3.height = 120;
+            preview3.appendChild(canvas3);
+            const ctx3 = canvas3.getContext('2d');
+            ctx3.imageSmoothingEnabled = false;
+            drawSpaceDefenderPreview(canvas3, ctx3);
         };
 
         // -------------------------------------------------
