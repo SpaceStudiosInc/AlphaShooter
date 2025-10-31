@@ -434,8 +434,9 @@
                         enemy.x -= enemy.speed;
                     }
                 } else {
-                    if (Math.random() > 0.5) {
-                        attack(enemy, 10, 'punch');
+                    // Enemy attacks less frequently - only 30% chance instead of 50%
+                    if (Math.random() > 0.7) {
+                        attack(enemy, 8, 'punch'); // Enemy only punches
                     }
                     
                     if (Math.random() > 0.97 && !enemy.isJumping) {
@@ -481,7 +482,8 @@
         }
         
         function drawFighter(fighter, isPlayer) {
-            ctx.fillStyle = '#000';
+            // Set color: dark gray for player, black for enemy
+            ctx.fillStyle = isPlayer ? '#444' : '#000';
             
             // Body
             ctx.fillRect(fighter.x, fighter.y, fighter.width, fighter.height);
@@ -491,14 +493,21 @@
             
             // Attack indicator
             if (fighter.isAttacking) {
-                const attackX = fighter.facing > 0 ? fighter.x + fighter.width : fighter.x - (fighter.attackType === 'kick' ? 30 : 20);
-                
-                if (fighter.attackType === 'punch') {
-                    // Punch - arm at upper chest level
-                    ctx.fillRect(attackX, fighter.y + 10, 20, 5);
-                } else if (fighter.attackType === 'kick') {
-                    // Kick - leg at lower level and longer
-                    ctx.fillRect(attackX, fighter.y + 50, 30, 5);
+                if (fighter === enemy) {
+                    // Enemy only has short punch
+                    const attackX = fighter.facing > 0 ? fighter.x + fighter.width : fighter.x - 15;
+                    ctx.fillRect(attackX, fighter.y + 10, 15, 5);
+                } else {
+                    // Player has both attacks
+                    const attackX = fighter.facing > 0 ? fighter.x + fighter.width : fighter.x - (fighter.attackType === 'kick' ? 30 : 20);
+                    
+                    if (fighter.attackType === 'punch') {
+                        // Punch - arm at upper chest level
+                        ctx.fillRect(attackX, fighter.y + 10, 20, 5);
+                    } else if (fighter.attackType === 'kick') {
+                        // Kick - leg at lower level and longer
+                        ctx.fillRect(attackX, fighter.y + 50, 30, 5);
+                    }
                 }
             }
         }
