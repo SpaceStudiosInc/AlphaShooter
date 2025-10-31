@@ -2,46 +2,54 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
 <title>Bomber</title>
 <style>
   html, body {
     margin: 0;
     padding: 0;
     height: 100%;
-    background: #000; /* black background behind the game */
-    color: #fff;      /* white text everywhere */
+    background: #000;
+    color: #fff;
     font-family: system-ui, monospace;
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden; /* prevent browser bounce */
+    touch-action: none; /* control gestures */
   }
 
   #gameContainer {
     width: 100%;
     max-width: 900px;
+    aspect-ratio: 16 / 9;
     position: relative;
-    border: 6px solid #fff;  /* white border */
-    background: #fff;        /* white inside the game */
+    border: 6px solid #fff;
+    background: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   canvas {
     display: block;
     width: 100%;
-    height: 640px;
-    background: #fff; /* white play area */
+    height: 100%;
+    background: #fff;
+    touch-action: none;
   }
 
   #hud {
     position: absolute;
     left: 10px;
     top: 10px;
-    color: #000; /* black text inside the white game area */
+    color: #000;
     font-weight: 700;
+    font-size: 14px;
   }
 
   #hud .line {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 
   #overlay {
@@ -50,39 +58,73 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(255,255,255,0.8);
   }
 
   .panel {
     background: #fff;
-    color: #000; /* black text inside the overlay panel */
-    border: 6px solid #fff;
+    color: #000;
+    border: 3px solid #000;
     padding: 20px;
     text-align: center;
+    border-radius: 8px;
   }
 
   button {
     padding: 8px 14px;
     font-weight: 700;
-    border: 3px solid #000;
+    border: 2px solid #000;
     background: #fff;
     color: #000;
     cursor: pointer;
+    font-size: 16px;
   }
 
   button:hover {
     background: #000;
     color: #fff;
   }
+
+  /* ✅ Touch control buttons for mobile */
+  #touchControls {
+    position: absolute;
+    bottom: 15px;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    pointer-events: none; /* only inner buttons interact */
+  }
+
+  .touch-btn {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    font-size: 22px;
+    text-align: center;
+    line-height: 60px;
+    pointer-events: auto;
+    user-select: none;
+  }
+
+  @media (min-width: 769px) {
+    #touchControls { display: none; } /* hide on desktop */
+  }
 </style>
 </head>
 <body>
   <div id="gameContainer">
     <canvas id="c"></canvas>
+
     <div id="hud">
       <div class="line" id="scoreLabel">SCORE: 0</div>
       <div class="line" id="livesLabel">LIVES: 3</div>
       <div class="line" id="infoLabel">SPACE: SHOOT • Z: BOMB • P: PAUSE</div>
     </div>
+
     <div id="overlay" style="display:none">
       <div class="panel">
         <div id="overlayTitle" style="font-size:22px;margin-bottom:10px;">PAUSED</div>
@@ -91,6 +133,14 @@
           <button id="restartBtn">Restart</button>
         </div>
       </div>
+    </div>
+
+    <!-- ✅ Mobile touch controls -->
+    <div id="touchControls">
+      <div class="touch-btn" id="leftBtn">←</div>
+      <div class="touch-btn" id="shootBtn">⎵</div>
+      <div class="touch-btn" id="rightBtn">→</div>
+      <div class="touch-btn" id="bombBtn">💣</div>
     </div>
   </div>
 
@@ -185,10 +235,10 @@ function update(dt){
   player.bombTimer = Math.max(0, player.bombTimer - dt);
 
   let mx=0,my=0;
-  if(keys['ArrowLeft']) mx--;
-  if(keys['ArrowRight']) mx++;
-  if(keys['ArrowUp']) my--;
-  if(keys['ArrowDown']) my++;
+  if(keys['ArrowLeft'] || keys['a']) mx--;
+  if(keys['ArrowRight'] || keys['d']) mx++;
+  if(keys['ArrowUp'] || keys['w']) my--;
+  if(keys['ArrowDown'] || keys['s']) my++;
   const len=Math.hypot(mx,my);
   if(len>0){ player.x+=(mx/len)*player.speed*dt; player.y+=(my/len)*player.speed*dt; }
   player.x = Math.max(8, Math.min(W()-player.w-8, player.x));
@@ -241,7 +291,6 @@ function gameOver(){ paused=true; overlay.style.display='flex'; overlayTitle.tex
 function draw(){
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W(),H());
 
-  // enemies
   for(let e of enemies){
     ctx.beginPath();
     ctx.rect(e.x,e.y,e.w,e.h);
@@ -249,11 +298,9 @@ function draw(){
     ctx.lineWidth=2; ctx.strokeStyle='#fff'; ctx.stroke();
   }
 
-  // bullets
   ctx.fillStyle='#000';
   for(let b of player.bullets) ctx.fillRect(b.x,b.y,b.w,b.h);
 
-  // bombs
   for(let b of player.bombs){
     if(!b.exploding){
       ctx.fillStyle='#000'; ctx.fillRect(b.x,b.y,b.w,b.h);
@@ -289,7 +336,21 @@ function drawMiniDrone(x,y){
   ctx.beginPath(); ctx.rect(x,y,14,8); ctx.fill(); ctx.stroke();
 }
 
-resetPlayer();
+/* ✅ TOUCH CONTROLS */
+const leftBtn=document.getElementById('leftBtn');
+const rightBtn=document.getElementById('rightBtn');
+const shootBtn=document.getElementById('shootBtn');
+const bombBtn=document.getElementById('bombBtn');
+
+function bindTouch(btn, onDown, onUp){
+  btn.addEventListener('touchstart', e=>{ e.preventDefault(); onDown(); });
+  btn.addEventListener('touchend', e=>{ e.preventDefault(); onUp(); });
+}
+
+bindTouch(leftBtn, ()=>keys['ArrowLeft']=true, ()=>keys['ArrowLeft']=false);
+bindTouch(rightBtn, ()=>keys['ArrowRight']=true, ()=>keys['ArrowRight']=false);
+bindTouch(shootBtn, ()=>keys[' ']=true, ()=>keys[' ']=false);
+bindTouch(bombBtn, ()=>keys['z']=true, ()=>keys['z']=false);
 </script>
 </body>
 </html>
