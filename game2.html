@@ -135,7 +135,7 @@ function dropBomb() {
         x: player.x,
         startY: player.y + 30,
         life: 10,
-        maxLife: 10
+        maxLife: 200
     });
     bombCooldown = 18;
 }
@@ -213,7 +213,7 @@ function updateExplosions() {
 /* ---------- SCROLLING GRASSY FIELD ---------- */
 function drawBackground() {
     scrollY += SCROLL_SPEED;
-    if (scrollY > 60) scrollY = 0;
+    if (scrollY > 400) scrollY = 0;
 
     // Sky
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
