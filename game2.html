@@ -134,8 +134,8 @@ function dropBomb() {
     bombs.push({
         x: player.x,
         startY: player.y + 30,
-        life: 60,
-        maxLife: 60
+        life: 10,
+        maxLife: 10
     });
     bombCooldown = 18;
 }
@@ -187,7 +187,7 @@ function spawnEnemy() {
         type,
         hp: type === 'soldier' ? 1 : type === 'building' ? 4 : 2,
         destroyed: false,
-        speed: 1.8 + Math.random() * 1.2
+        speed: 2
     });
 }
 function updateEnemies() {
@@ -199,7 +199,7 @@ function updateEnemies() {
         }
     }
     groundEnemies = alive;
-    if (Math.random() < 0.03) spawnEnemy(); // spawn rate
+    if (Math.random() < 0.003) spawnEnemy(); // spawn rate
 }
 
 /* ---------- EXPLOSIONS ---------- */
@@ -213,7 +213,7 @@ function updateExplosions() {
 /* ---------- SCROLLING GRASSY FIELD ---------- */
 function drawBackground() {
     scrollY += SCROLL_SPEED;
-    if (scrollY > 128) scrollY = 0;
+    if (scrollY > 60) scrollY = 0;
 
     // Sky
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
