@@ -43,10 +43,10 @@
     <div id="mobileControls">
         <div class="controlGroup">
             <div class="dpad">
-                <button class="controlBtn" data-key="up">↑</button>
                 <button class="controlBtn" data-key="left">←</button>
-                <button class="controlBtn" data-key="right">→</button>
+                <button class="controlBtn" data-key="up">↑</button>
                 <button class="controlBtn" data-key="down">↓</button>
+                <button class="controlBtn" data-key="right">→</button>
             </div>
         </div>
         <div class="fireButtons">
@@ -57,9 +57,9 @@
         <h1>DRONE STRIKE</h1>
         <button class="btn" onclick="startGame()">START MISSION</button>
         <div class="instructions">
-            <div>← → or A D – MOVE DRONE</div>
+            <div>← → ↑ ↓ or WASD – MOVE DRONE</div>
             <div>SPACE or X – DROP BOMB</div>
-            <div>Destroy ground targets. Avoid missing too many.</div>
+            <div>Target enemies scrolling from top. 1 second delayed strike!</div>
         </div>
     </div>
     <div id="gameOverScreen" class="hidden">
@@ -74,328 +74,347 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let gameState = 'start';
 let score = 0, lives = 3;
-const player = {x: canvas.width/2, y: 120, width: 44, height: 44, speed: 5};
-let keys = {}, bombs = [], groundEnemies = [], explosions = [], clouds = [];
+const player = {x: 300, y: 120, width: 44, height: 44, speed: 6};
+let keys = {}, strikes = [], groundEnemies = [], explosions = [], clouds = [];
 let bombCooldown = 0;
 let missCount = 0;
-const MAX_MISSES = 5;
+const MAX_MISSES = 8;
+const GROUND_Y = canvas.height - 120;
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 if (isMobile) document.getElementById('mobileControls').classList.add('active');
 
-/* ---------- CLOUDS (foreground) ---------- */
-for(let i=0;i<25;i++) clouds.push({
+/* ---------- CLOUDS ---------- */
+for(let i=0; i<30; i++) clouds.push({
     x: Math.random()*canvas.width,
-    y: Math.random()*180,
-    size: Math.random()*50+30,
-    speed: Math.random()*0.3+0.1
+    y: Math.random()*200 - 50,
+    size: Math.random()*40 + 20,
+    speed: Math.random()*0.5 + 0.2
 });
 
 /* ---------- INPUT ---------- */
 document.addEventListener('keydown', e => {
     keys[e.key.toLowerCase()] = true;
-    if ((e.key===' '||e.key.toLowerCase()==='x') && gameState==='playing' && bombCooldown<=0) dropBomb();
+    if ((e.key===' '||e.key.toLowerCase()==='x') && gameState==='playing' && bombCooldown<=0) dropStrike();
 });
 document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-function touchStart(e){e.preventDefault(); const k=this.dataset.key; if(k==='bomb')dropBomb(); else keys[k]=true;}
-function touchEnd(e){e.preventDefault(); const k=this.dataset.key; if(k!=='bomb') keys[k]=false;}
-document.querySelectorAll('.controlBtn,.fireBtn').forEach(b=>{b.addEventListener('touchstart',touchStart);b.addEventListener('touchend',touchEnd);});
+
+function touchStart(e){
+    e.preventDefault();
+    const k = this.dataset.key;
+    if(k==='bomb') dropStrike();
+    else keys[k] = true;
+}
+function touchEnd(e){
+    e.preventDefault();
+    const k = this.dataset.key;
+    if(k!=='bomb') keys[k] = false;
+}
+document.querySelectorAll('.controlBtn,.fireBtn').forEach(b => {
+    b.addEventListener('touchstart', touchStart);
+    b.addEventListener('touchend', touchEnd);
+});
 
 /* ---------- GAME FLOW ---------- */
 function startGame(){
-    gameState='playing'; score=0; lives=3; missCount=0;
-    player.x=canvas.width/2; bombs=[]; groundEnemies=[]; explosions=[]; bombCooldown=0;
+    gameState = 'playing';
+    score = 0; lives = 3; missCount = 0;
+    player.x = canvas.width/2; 
+    strikes = []; groundEnemies = []; explosions = [];
+    bombCooldown = 0;
     document.getElementById('startScreen').classList.add('hidden');
     document.getElementById('gameOverScreen').classList.add('hidden');
     updateUI();
     requestAnimationFrame(gameLoop);
 }
+
 function gameOver(){
-    gameState='gameover';
-    document.getElementById('finalScore').textContent=score;
+    gameState = 'gameover';
+    document.getElementById('finalScore').textContent = score;
     document.getElementById('gameOverScreen').classList.remove('hidden');
 }
+
 function updateUI(){
-    document.getElementById('score').textContent=score;
-    document.getElementById('lives').textContent=lives;
+    document.getElementById('score').textContent = score;
+    document.getElementById('lives').textContent = lives;
 }
 
-/* ---------- PLAYER (DRONE – foreground) ---------- */
+/* ---------- PLAYER ---------- */
 function updatePlayer(){
-    if ((keys['arrowleft']||keys['a']||keys['left']) && player.x>30) player.x-=player.speed;
-    if ((keys['arrowright']||keys['d']||keys['right']) && player.x<canvas.width-30) player.x+=player.speed;
-    if ((keys['arrowup']||keys['w']||keys['up']) && player.y>80) player.y-=player.speed;
-    if ((keys['arrowdown']||keys['s']||keys['down']) && player.y<200) player.y+=player.speed;
-    if (bombCooldown>0) bombCooldown--;
+    if ((keys['arrowleft']||keys['a']||keys['left']) && player.x > 25) player.x -= player.speed;
+    if ((keys['arrowright']||keys['d']||keys['right']) && player.x < canvas.width - 25) player.x += player.speed;
+    if ((keys['arrowup']||keys['w']||keys['up']) && player.y > 60) player.y -= player.speed;
+    if ((keys['arrowdown']||keys['s']||keys['down']) && player.y < 220) player.y += player.speed;
+    if (bombCooldown > 0) bombCooldown--;
 }
 
-/* ---------- BOMB DROP (perspective) ---------- */
-function dropBomb(){
-    bombs.push({
+/* ---------- STRIKE (1 second delay, then instant hit at exact spot) ---------- */
+function dropStrike(){
+    strikes.push({
         x: player.x,
-        y: player.y,
-        targetY: canvas.height-80,               // ground plane
-        speed: 8,                                 // pixels per frame toward ground
-        scale: 1,
-        life: 300
+        life: 60,  // ~1 second at 60fps
+        maxLife: 60
     });
-    bombCooldown = 12;
+    bombCooldown = 20;  // cooldown between strikes
 }
-function updateBombs(){
-    const newB = [];
-    for(const b of bombs){
-        // move toward ground
-        const dy = b.targetY - b.y;
-        if (Math.abs(dy) < b.speed) {
-            b.y = b.targetY;
+
+function updateStrikes(){
+    const newStrikes = [];
+    for(const s of strikes){
+        s.life--;
+        if(s.life > 0){
+            newStrikes.push(s);
         } else {
-            b.y += b.speed * Math.sign(dy);
-        }
-        // perspective scaling (larger when farther away)
-        const depth = (b.y - 120) / (canvas.height-200);
-        b.scale = 0.3 + depth*0.9;   // 0.3 at drone, ~1.2 at ground
-
-        b.life--;
-        let hit = false;
-        for(let j=groundEnemies.length-1;j>=0;j--){
-            const e = groundEnemies[j];
-            if(e.destroyed) continue;
-            const dist = Math.hypot(b.x - e.x, b.y - e.y);
-            if(dist < 30*b.scale){
-                e.hp--;
-                if(e.hp<=0){
-                    e.destroyed=true;
-                    createExplosion(e.x,e.y,70);
-                    score += e.type==='bunker'?200:e.type==='turret'?150:300;
-                    updateUI();
+            // STRIKE! Check hits at exact position
+            createExplosion(s.x, GROUND_Y, 60);
+            let hit = false;
+            for(let j = groundEnemies.length - 1; j >= 0; j--){
+                const e = groundEnemies[j];
+                if(e.destroyed) continue;
+                const dist = Math.hypot(s.x - e.x, GROUND_Y - e.y);
+                if(dist < 45){
+                    e.hp--;
+                    if(e.hp <= 0){
+                        e.destroyed = true;
+                        score += e.type === 'tank' ? 300 : e.type === 'building' ? 200 : 150;
+                        updateUI();
+                    }
+                    hit = true;
+                    break;
                 }
-                hit=true;
-                break;
             }
-        }
-        if(!hit && b.life>0 && b.y < canvas.height-50) newB.push(b);
-        else if(!hit && b.y >= canvas.height-80){
-            missCount++;
-            if(missCount>=MAX_MISSES){
-                lives--; missCount=0; updateUI();
-                if(lives<=0) gameOver();
+            if(!hit){
+                missCount++;
+                if(missCount >= MAX_MISSES){
+                    lives--;
+                    missCount = 0;
+                    updateUI();
+                    if(lives <= 0) gameOver();
+                }
             }
         }
     }
-    bombs = newB;
+    strikes = newStrikes;
 }
 
-/* ---------- TARGET RETICLE (impact predictor) ---------- */
-let targetReticle = null;
-function updateTargetReticle(){
-    if(bombCooldown>0 || bombs.length>0){ targetReticle=null; return; }
-    const impactY = canvas.height-80;
-    const impactX = player.x;
-    let closest=null, minDist=Infinity;
-    for(const e of groundEnemies){
-        if(e.destroyed) continue;
-        const d = Math.hypot(impactX-e.x, impactY-e.y);
-        if(d<minDist){ minDist=d; closest=e; }
-    }
-    targetReticle = closest ? {x:closest.x, y:closest.y, predX:impactX, predY:impactY}
-                            : {x:impactX, y:impactY, predX:impactX, predY:impactY};
-}
-
-/* ---------- GROUND ENEMIES (background, scroll toward player) ---------- */
+/* ---------- ENEMIES (scroll DOWN from top to GROUND) ---------- */
 function spawnGroundEnemy(){
-    const types = ['bunker','turret','depot'];
-    const type = types[Math.floor(Math.random()*types.length)];
+    const types = ['soldier', 'building', 'tank'];
+    const type = types[Math.floor(Math.random() * types.length)];
     groundEnemies.push({
-        x: Math.random()*(canvas.width-80)+40,
-        y: canvas.height+80,                     // start below screen
-        width: type==='bunker'?55:type==='turret'?45:50,
-        height: 40,
-        type,
-        hp: type==='bunker'?3:type==='turret'?2:1,
-        destroyed:false,
-        speed: 1.6
+        x: Math.random() * (canvas.width - 80) + 40,
+        y: -100,  // spawn at top
+        type: type,
+        hp: type === 'soldier' ? 1 : type === 'building' ? 4 : 2,
+        destroyed: false,
+        speed: 2.2 + Math.random() * 0.5
     });
 }
+
 function updateGroundEnemies(){
     const newE = [];
     for(const e of groundEnemies){
-        e.y -= e.speed;                          // move up (toward player)
-        if(e.y > -100) newE.push(e);
+        e.y += e.speed;  // move DOWN toward ground
+        if(e.y < GROUND_Y + 50) newE.push(e);  // keep until past ground
     }
     groundEnemies = newE;
+    
+    // spawn new enemies
+    if(Math.random() < 0.018) spawnGroundEnemy();
 }
 
 /* ---------- EXPLOSIONS ---------- */
-function createExplosion(x,y,size=50){
-    explosions.push({x,y,size,life:25,maxLife:25});
+function createExplosion(x, y, size = 50){
+    explosions.push({x, y, size, life: 30, maxLife: 30});
 }
+
 function updateExplosions(){
     const newE = [];
     for(const e of explosions){
         e.life--;
-        if(e.life>0) newE.push(e);
+        if(e.life > 0) newE.push(e);
     }
     explosions = newE;
 }
 
-/* ---------- CLOUDS (foreground) ---------- */
+/* ---------- CLOUDS ---------- */
 function updateClouds(){
     for(const c of clouds){
         c.x += c.speed;
-        if(c.x > canvas.width+100) c.x = -100;
+        if(c.x > canvas.width + 100) c.x = -100;
     }
 }
 
 /* ---------- DRAWING ---------- */
 function drawBackground(){
-    // Sky
-    const grad = ctx.createLinearGradient(0,0,0,canvas.height);
-    grad.addColorStop(0,'#87CEEB');
-    grad.addColorStop(1,'#98D8C8');
+    // Sky gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, '#87CEEB');
+    grad.addColorStop(0.6, '#98D8C8');
+    grad.addColorStop(1, '#228B22');
     ctx.fillStyle = grad;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    // Ground (far away)
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Ground texture
     ctx.fillStyle = '#8B7355';
-    ctx.fillRect(0,canvas.height-100,canvas.width,100);
-    ctx.fillStyle = '#228B22';
-    ctx.fillRect(0,canvas.height-100,canvas.width,20);
+    ctx.fillRect(0, GROUND_Y - 20, canvas.width, 120);
+    ctx.fillStyle = '#654321';
+    for(let i = 0; i < canvas.width; i += 15) {
+        ctx.fillRect(i, GROUND_Y - 15, 8, 10);
+    }
 }
+
 function drawClouds(){
     ctx.fillStyle = '#fff';
+    ctx.globalAlpha = 0.8;
     for(const c of clouds){
-        ctx.globalAlpha = 0.85;
+        ctx.save();
+        ctx.translate(c.x, c.y);
         ctx.beginPath();
-        ctx.arc(c.x,c.y,c.size*0.4,0,Math.PI*2);
-        ctx.arc(c.x+c.size*0.3,c.y,c.size*0.5,0,Math.PI*2);
-        ctx.arc(c.x-c.size*0.3,c.y,c.size*0.5,0,Math.PI*2);
+        ctx.arc(0, 0, c.size * 0.4, 0, Math.PI * 2);
+        ctx.arc(c.size * 0.3, 0, c.size * 0.5, 0, Math.PI * 2);
+        ctx.arc(-c.size * 0.3, 0, c.size * 0.5, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
     }
     ctx.globalAlpha = 1;
 }
+
 function drawPlayer(){
     ctx.save();
-    ctx.translate(player.x,player.y);
+    ctx.translate(player.x, player.y);
+    
     // Drone body
-    ctx.fillStyle = '#444';
-    ctx.fillRect(-22,-22,44,44);
-    ctx.fillRect(-12,-30,24,12);
-    // Propellers (simple lines)
-    ctx.strokeStyle = '#000';
+    ctx.fillStyle = '#4a4a4a';
+    ctx.fillRect(-22, -22, 44, 44);
+    ctx.fillStyle = '#666';
+    ctx.fillRect(-12, -30, 24, 12);
+    
+    // Propellers
+    ctx.strokeStyle = '#222';
     ctx.lineWidth = 3;
-    for(let i=0;i<4;i++){
-        const px = [-16,16,-16,16][i];
-        const py = [-12,-12,12,12][i];
+    for(let i = 0; i < 4; i++){
+        const px = [-16, 16, -16, 16][i];
+        const py = [-12, -12, 12, 12][i];
         ctx.beginPath();
-        ctx.moveTo(px-10,py);
-        ctx.lineTo(px+10,py);
+        ctx.moveTo(px - 12, py);
+        ctx.lineTo(px + 12, py);
         ctx.stroke();
     }
-    // Camera dot
-    ctx.fillStyle = '#f00';
-    ctx.beginPath(); ctx.arc(0,0,4,0,Math.PI*2); ctx.fill();
+    
+    // Camera
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
 }
-function drawBombs(){
-    for(const b of bombs){
+
+function drawStrikes(){
+    for(const s of strikes){
+        const alpha = s.life / s.maxLife;
         ctx.save();
-        const depth = (b.y-120)/(canvas.height-200);
-        const scale = 0.3 + depth*0.9;
-        ctx.translate(b.x,b.y);
-        ctx.scale(scale,scale);
-        // bomb shape
-        ctx.fillStyle = '#333';
-        ctx.fillRect(-4,-7,8,14);
-        ctx.fillStyle = '#f80';
-        ctx.fillRect(-3,4,6,6);
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.translate(s.x, player.y + 20);
+        ctx.scale(1 + (1 - alpha) * 0.5, 1 + (1 - alpha) * 0.5);
+        
+        // Bomb falling
+        ctx.fillStyle = '#444';
+        ctx.fillRect(-4, -8, 8, 16);
+        ctx.fillStyle = '#ff8800';
+        ctx.fillRect(-3, 6, 6, 6);
         ctx.restore();
     }
 }
+
 function drawGroundEnemies(){
     for(const e of groundEnemies){
         if(e.destroyed) continue;
-        const depth = (e.y-120)/(canvas.height-200);
-        const scale = 0.5 + depth*0.7;   // smaller when farther
+        
+        const progress = (e.y + 100) / (GROUND_Y + 100);  // 0 at top, 1 at ground
+        const scale = 0.4 + progress * 0.8;  // grow as they approach
+        
         ctx.save();
-        ctx.translate(e.x,e.y);
-        ctx.scale(scale,scale);
-        if(e.type==='bunker'){
-            ctx.fillStyle='#555'; ctx.fillRect(-27,-15,54,30);
-            ctx.fillStyle='#333'; ctx.fillRect(-22,-10,44,20);
-            ctx.fillStyle='#f00'; ctx.fillRect(-5,-22,10,12);
-        }else if(e.type==='turret'){
-            ctx.fillStyle='#666'; ctx.fillRect(-16,-10,32,20);
-            ctx.fillStyle='#444'; ctx.fillRect(-5,-22,10,16);
-            ctx.fillStyle='#f00';
-            ctx.beginPath(); ctx.arc(0,-14,6,0,Math.PI*2); ctx.fill();
-        }else{ // depot
-            ctx.fillStyle='#8B4513'; ctx.fillRect(-24,-18,48,36);
-            ctx.fillStyle='#FFD700';
-            ctx.fillRect(-19,-14,12,12);
-            ctx.fillRect(-3,-14,12,12);
-            ctx.fillRect(13,-14,12,12);
+        ctx.translate(e.x, e.y);
+        ctx.scale(scale, scale);
+        
+        if(e.type === 'soldier'){
+            // Soldier
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(-8, -25, 16, 25);  // body
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(-5, -32, 10, 8);   // helmet
+            ctx.fillStyle = '#000';
+            ctx.fillRect(-12, -5, 4, 8);    // rifle
+        } else if(e.type === 'building'){
+            // Building
+            ctx.fillStyle = '#666';
+            ctx.fillRect(-25, -35, 50, 35);
+            ctx.fillStyle = '#444';
+            ctx.fillRect(-20, -30, 40, 25);
+            ctx.fillStyle = '#ff4444';
+            ctx.fillRect(-8, -42, 16, 12);  // roof detail
+        } else { // tank
+            // Tank
+            ctx.fillStyle = '#4a4a4a';
+            ctx.fillRect(-22, -18, 44, 18);
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-15, -25, 30, 12); // turret
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(0, -20, 8, 0, Math.PI * 2);
+            ctx.fill(); // cannon
         }
         ctx.restore();
     }
 }
+
 function drawExplosions(){
     for(const e of explosions){
-        const a = e.life/e.maxLife;
-        const s = e.size*(1+(1-a)*0.8);
+        const alpha = e.life / e.maxLife;
         ctx.save();
-        ctx.globalAlpha = a;
-        ctx.translate(e.x,e.y);
-        ctx.fillStyle='#ff9500';
-        ctx.beginPath(); ctx.arc(0,0,s*0.5,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#ff0000';
-        ctx.beginPath(); ctx.arc(0,0,s*0.8,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha = alpha;
+        ctx.translate(e.x, e.y);
+        const size = e.size * (1 + (1 - alpha) * 0.6);
+        
+        // Fire
+        ctx.fillStyle = '#ffaa00';
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Blast
+        ctx.fillStyle = '#ff4444';
+        ctx.beginPath();
+        ctx.arc(0, 0, size, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
     }
-    ctx.globalAlpha=1;
-}
-function drawTargetReticle(){
-    if(!targetReticle) return;
-    const {predX,predY} = targetReticle;
-    ctx.strokeStyle='#ff0000';
-    ctx.lineWidth=2;
-    ctx.setLineDash([8,8]);
-    ctx.beginPath();
-    ctx.arc(predX,predY,35,0,Math.PI*2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.strokeStyle='#ffff00';
-    ctx.beginPath();
-    ctx.moveTo(predX-40,predY); ctx.lineTo(predX-20,predY);
-    ctx.moveTo(predX+20,predY); ctx.lineTo(predX+40,predY);
-    ctx.moveTo(predX,predY-40); ctx.lineTo(predX,predY-20);
-    ctx.moveTo(predX,predY+20); ctx.lineTo(predX,predY+40);
-    ctx.stroke();
+    ctx.globalAlpha = 1;
 }
 
 /* ---------- MAIN LOOP ---------- */
-let enemySpawnTimer = 0;
 function gameLoop(){
-    if(gameState!=='playing') return;
+    if(gameState !== 'playing') return;
+    
+    // Clear
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Update
     drawBackground();
     updateClouds();
     drawClouds();
+    
     updatePlayer();
-    updateBombs();
+    updateStrikes();
     updateGroundEnemies();
     updateExplosions();
-    updateTargetReticle();
-
-    // spawn enemies
-    if(++enemySpawnTimer>85){
-        spawnGroundEnemy();
-        enemySpawnTimer=0;
-    }
-
+    
+    // Draw
     drawGroundEnemies();
-    drawTargetReticle();
-    drawBombs();
+    drawStrikes();
     drawExplosions();
     drawPlayer();
-
+    
     requestAnimationFrame(gameLoop);
 }
 </script>
