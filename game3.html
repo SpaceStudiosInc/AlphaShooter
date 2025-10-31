@@ -256,8 +256,8 @@
                 height: 60,
                 velocityY: 0,
                 velocityX: 0,
-                health: 100,
-                maxHealth: 100,
+                health: 50,
+                maxHealth: 50,
                 speed: 2,
                 isJumping: false,
                 isAttacking: false,
@@ -481,37 +481,61 @@
             fighter.x = Math.max(0, Math.min(canvas.width - fighter.width, fighter.x));
         }
         
-        function drawFighter(fighter, isPlayer) {
-            // Set color: dark gray for player, black for enemy
-            ctx.fillStyle = '#444';     // white fill
-          
-            
-            // Body
-            ctx.fillRect(fighter.x, fighter.y, fighter.width, fighter.height);
-            
-            // Head
-            ctx.fillRect(fighter.x + 5, fighter.y - 15, 20, 20);
-            
-            // Attack indicator
-            if (fighter.isAttacking) {
-                if (fighter === enemy) {
-                    // Enemy only has short punch
-                    const attackX = fighter.facing > 0 ? fighter.x + fighter.width : fighter.x - 15;
-                    ctx.fillRect(attackX, fighter.y + 10, 15, 5);
-                } else {
-                    // Player has both attacks
-                    const attackX = fighter.facing > 0 ? fighter.x + fighter.width : fighter.x - (fighter.attackType === 'kick' ? 30 : 20);
-                    
-                    if (fighter.attackType === 'punch') {
-                        // Punch - arm at upper chest level
-                        ctx.fillRect(attackX, fighter.y + 10, 20, 5);
-                    } else if (fighter.attackType === 'kick') {
-                        // Kick - leg at lower level and longer
-                        ctx.fillRect(attackX, fighter.y + 50, 30, 5);
-                    }
-                }
+       function drawFighter(fighter, isPlayer) {
+    // Choose colors
+    const fillColor = isPlayer ? '#fff' : '#000';
+    const strokeColor = isPlayer ? '#000' : '#fff';
+    
+    ctx.lineWidth = 2;
+    ctx.fillStyle = fillColor;
+    ctx.strokeStyle = strokeColor;
+
+    // Body
+    ctx.beginPath();
+    ctx.rect(fighter.x, fighter.y, fighter.width, fighter.height);
+    ctx.fill();
+    ctx.stroke();
+
+    // Head
+    ctx.beginPath();
+    ctx.rect(fighter.x + 5, fighter.y - 15, 20, 20);
+    ctx.fill();
+    ctx.stroke();
+
+    // Attack indicator
+    if (fighter.isAttacking) {
+        let attackX;
+        let attackY;
+        let attackW;
+        let attackH;
+
+        if (fighter === enemy) {
+            // Enemy short punch
+            attackX = fighter.facing > 0 ? fighter.x + fighter.width : fighter.x - 15;
+            attackY = fighter.y + 10;
+            attackW = 15;
+            attackH = 5;
+        } else {
+            // Player attack types
+            attackX = fighter.facing > 0 ? fighter.x + fighter.width : fighter.x - (fighter.attackType === 'kick' ? 30 : 20);
+            if (fighter.attackType === 'punch') {
+                attackY = fighter.y + 10;
+                attackW = 20;
+                attackH = 5;
+            } else if (fighter.attackType === 'kick') {
+                attackY = fighter.y + 50;
+                attackW = 30;
+                attackH = 5;
             }
         }
+
+        ctx.beginPath();
+        ctx.rect(attackX, attackY, attackW, attackH);
+        ctx.fill();
+        ctx.stroke();
+    }
+}
+
         
         function updateHealthBars() {
             const playerHealthBar = document.getElementById('playerHealth');
