@@ -1,631 +1,422 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Airsoft Defense</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<title>ALPHA SHOOTER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* {
+  box-sizing: border-box;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  -webkit-font-smoothing: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+html, body {
+  margin: 0; padding: 0;
+  background: #000;
+  color: #fff;
+  font-family: 'Pixelify Sans', monospace;
+  overflow: hidden;
+  height: 100%; height: 100dvh; width: 100%;
+  position: fixed; inset: 0;
+  overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none;
+  cursor: crosshair;
+}
+#game { position: absolute; inset: 0; }
+canvas#gameCanvas { position: absolute; inset: 0; display: block; background: #000; }
 
-        body {
-            font-family: 'Press Start 2P', cursive;
-            background: linear-gradient(to bottom, #1a1a2e 0%, #16213e 100%);
-            overflow: hidden;
-            cursor: crosshair;
-        }
+#hud {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: none;
+  align-items: flex-start; justify-content: space-between;
+  padding: 10px 14px;
+  z-index: 20;
+  pointer-events: none;
+}
+body.in-run #hud { display: flex; }
+#hudLeft, #hudRight { display: flex; flex-direction: column; gap: 4px; }
+#hudRight { align-items: flex-end; }
+.hud-line { font-size: 12px; letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
+#healthBarOuter {
+  width: 180px; height: 12px;
+  border: 2px solid #fff; background: #000; margin-top: 2px;
+}
+#healthBarInner { height: 100%; background: #e22; width: 100%; transition: width 0.12s; }
+#ammoTicks {
+  display: flex; flex-wrap: wrap; gap: 2px;
+  max-width: 200px; margin-top: 3px;
+  min-height: 14px;
+}
+#ammoTicks .tick {
+  width: 3px; height: 12px;
+  background: #fd4;
+  border-radius: 1px;
+}
+#ammoTicks .tick.empty { background: #333; }
+#pauseBtn {
+  pointer-events: auto;
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 11px; padding: 5px 10px; cursor: pointer;
+  background: #000; color: #fff; border: 2px solid #fff; letter-spacing: 1px;
+}
+#pauseBtn:hover { background: #fff; color: #000; }
+#weaponLabel { font-size: 11px; letter-spacing: 1px; margin-top: 2px; }
 
-        #game {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
+.overlay {
+  position: absolute; inset: 0;
+  display: none; flex-direction: column; gap: 12px;
+  align-items: center; justify-content: center;
+  background: #000;
+  text-align: center;
+  z-index: 30;
+  color: #fff;
+  padding: 16px;
+  overflow-y: auto;
+}
+.overlay.show { display: flex; }
+.overlay h1 { font-size: 36px; margin: 0; letter-spacing: 5px; font-weight: 700; }
+.overlay h2 { font-size: 22px; margin: 0; letter-spacing: 3px; font-weight: 600; }
+.overlay .sub { font-size: 12px; color: #aaa; letter-spacing: 1px; max-width: 520px; line-height: 1.55; }
+.overlay .stat-line { font-size: 12px; color: #ccc; letter-spacing: 1px; }
 
-        .score-board {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: #fff;
-            padding: 15px 30px;
-            font-size: 20px;
-            border-radius: 10px;
-            z-index: 100;
-        }
+.menu-btns { display: flex; flex-direction: column; gap: 9px; align-items: center; }
+.overlay button {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 13px; padding: 9px 26px; cursor: pointer;
+  background: #000; color: #fff; border: 2px solid #fff;
+  letter-spacing: 2px; text-transform: uppercase;
+  min-width: 200px;
+}
+.overlay button:hover { background: #fff; color: #000; }
+.overlay button.secondary { border-color: #666; color: #ccc; }
+.overlay button.secondary:hover { background: #fff; color: #000; border-color: #fff; }
+.overlay button.danger { border-color: #f88; color: #f88; }
+.overlay button.danger:hover { background: #f88; color: #000; }
+.overlay button:disabled { opacity: 0.3; cursor: not-allowed; }
 
-        .ground {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 60px;
-            background: #2d2d2d;
-            border-top: 3px solid #444;
-            z-index: 10;
-        }
+#optionsScreen { justify-content: flex-start; padding-top: 28px; gap: 8px; }
+.opt-list { width: min(380px, 92vw); display: flex; flex-direction: column; gap: 7px; text-align: left; }
+.opt-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.opt-row label { font-size: 12px; letter-spacing: 1px; min-width: 110px; }
+.opt-row .opt-val { font-size: 12px; color: #aaa; min-width: 36px; text-align: right; }
+.opt-row input[type="range"] {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 6px; background: #333; border: 1px solid #fff; outline: none; cursor: pointer;
+}
+.opt-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  background: #fff; border: 2px solid #000; cursor: pointer;
+}
+.opt-divider { width: min(380px, 92vw); border-color: #333; margin: 2px 0; }
+.opt-section { font-size: 11px; color: #666; letter-spacing: 2px; margin-top: 4px; }
+.opt-toggle {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 12px; padding: 5px 12px; cursor: pointer;
+  background: #000; color: #fff; border: 2px solid #fff; letter-spacing: 1px;
+  min-width: 64px;
+}
+.opt-toggle:hover { background: #fff; color: #000; }
+.opt-toggle.off { border-color: #555; color: #888; }
+.opt-toggle.off:hover { background: #fff; color: #000; border-color: #fff; }
 
-        .turret {
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 50px;
-            height: 50px;
-            z-index: 50;
-        }
+#upgradesScreen, #shopScreen { justify-content: flex-start; padding-top: 28px; gap: 12px; }
+.card-grid {
+  display: flex; flex-direction: column; gap: 10px;
+  width: min(640px, 94vw); max-height: 58vh; overflow-y: auto;
+}
+.shop-section { display: flex; flex-direction: column; gap: 6px; }
+.shop-section-title {
+  font-size: 11px; letter-spacing: 2px; color: #aaa;
+  border-bottom: 1px solid #333; padding-bottom: 3px; text-align: left;
+}
+.shop-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+@media (max-width: 640px) {
+  .shop-row { grid-template-columns: repeat(2, 1fr); }
+}
+.card {
+  border: 2px solid #444; padding: 8px 10px; text-align: left;
+  display: flex; flex-direction: column; gap: 4px;
+  min-width: 0; box-sizing: border-box;
+}
+.card.maxed { border-color: #666; }
+.card.owned { border-color: #555; }
+.card-name { font-size: 12px; letter-spacing: 1px; }
+.card-desc { font-size: 9px; color: #888; line-height: 1.3; flex: 1; }
+.card-level { font-size: 9px; color: #bbb; letter-spacing: 1px; }
+.overlay .card-buy, .card-buy {
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 11px; padding: 6px 8px; cursor: pointer; margin-top: auto;
+  background: #000; color: #fff; border: 2px solid #fff;
+  letter-spacing: 1px; text-transform: none;
+  min-width: 0; width: 100%;
+  box-sizing: border-box;
+}
+.overlay .card-buy:hover:not(:disabled), .card-buy:hover:not(:disabled) {
+  background: #fff; color: #000;
+}
+.overlay .card-buy:disabled, .card-buy:disabled {
+  opacity: 0.35; cursor: not-allowed;
+}
 
-        .turret-base {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 20px;
-            background: #4d4d4d;
-            border: 2px solid #666;
-            border-radius: 5px;
-        }
+#toast {
+  position: absolute; top: 14%; left: 50%; transform: translate(-50%, -50%);
+  background: #000; border: 2px solid #fff; padding: 8px 18px;
+  font-size: 13px; letter-spacing: 2px; color: #fff;
+  opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap;
+  z-index: 50;
+}
+#toast.show { opacity: 1; }
 
-        .turret-body {
-            position: absolute;
-            bottom: 15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 30px;
-            background: #2d4a2b;
-            border: 2px solid #4d8b3d;
-            border-radius: 5px;
-        }
+#hudWaveLine { font-size: 15px; letter-spacing: 1px; text-shadow: 1px 1px 0 #000; }
 
-        .turret-barrel {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 8px;
-            height: 30px;
-            background: #333;
-            border: 1px solid #555;
-            transform-origin: center bottom;
-        }
-
-        .enemy {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-        }
-
-        .enemy-sprite {
-            width: 100%;
-            height: 100%;
-            background: #8b0000;
-            border: 2px solid #ff0000;
-            border-radius: 3px;
-            position: relative;
-        }
-
-        .enemy-head {
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 10px;
-            height: 10px;
-            background: #d4a574;
-            border: 1px solid #8b0000;
-            border-radius: 50%;
-        }
-
-        .projectile {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #ffff00;
-            border-radius: 50%;
-            box-shadow: 0 0 10px #ffff00;
-            z-index: 40;
-        }
-
-        .explosion {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: radial-gradient(circle, #ff6600, #ff0000, transparent);
-            border-radius: 50%;
-            pointer-events: none;
-            animation: explode 0.4s ease-out forwards;
-            z-index: 45;
-        }
-
-        @keyframes explode {
-            0% {
-                transform: scale(0);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(2.5);
-                opacity: 0;
-            }
-        }
-
-        .hit-effect {
-            position: absolute;
-            font-size: 18px;
-            font-weight: bold;
-            color: #00ff00;
-            animation: hitPop 0.6s ease-out forwards;
-            pointer-events: none;
-            z-index: 99;
-        }
-
-        @keyframes hitPop {
-            0% {
-                transform: scale(0.5) translateY(0);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(1.5) translateY(-40px);
-                opacity: 0;
-            }
-        }
-
-        .trail {
-            position: absolute;
-            width: 2px;
-            height: 10px;
-            background: rgba(255, 255, 0, 0.5);
-            pointer-events: none;
-            z-index: 35;
-            animation: trailFade 0.3s ease-out forwards;
-        }
-
-        @keyframes trailFade {
-            to {
-                opacity: 0;
-            }
-        }
-
-        .start-screen, .end-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
-        }
-
-        h1 {
-            color: #ffd700;
-            font-size: 48px;
-            margin-bottom: 30px;
-            text-shadow: 3px 3px #ff4444;
-        }
-
-        button {
-            font-family: 'Press Start 2P', cursive;
-            font-size: 20px;
-            padding: 20px 40px;
-            background: #4169e1;
-            color: #fff;
-            border: 4px solid #ffd700;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background: #ffd700;
-            color: #000;
-            transform: scale(1.1);
-        }
-
-        .final-score {
-            color: #fff;
-            font-size: 24px;
-            margin: 20px 0;
-        }
-
-        .timer {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 20px;
-            color: #00ff00;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 25px;
-            border-radius: 10px;
-            z-index: 100;
-        }
-
-        .health-bar {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px;
-            height: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid #ffd700;
-            border-radius: 5px;
-            z-index: 100;
-            overflow: hidden;
-        }
-
-        .health-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #ff0000, #00ff00);
-            transition: width 0.3s;
-        }
-
-        .ammo-display {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #ffff00;
-            padding: 15px 30px;
-            font-size: 20px;
-            border-radius: 10px;
-            z-index: 100;
-        }
-    </style>
+/* ── Mobile virtual controls ── */
+#mobileControls {
+  display: none;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+}
+body.show-mobile-controls.in-run #mobileControls { display: block; }
+.mc-stick, .mc-btn {
+  pointer-events: auto;
+  position: absolute;
+  border: 2px solid rgba(255,255,255,0.55);
+  background: rgba(0,0,0,0.4);
+  border-radius: 50%;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+#mcJoystick {
+  width: 120px; height: 120px;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+}
+#mcKnob {
+  position: absolute;
+  width: 48px; height: 48px;
+  left: 50%; top: 50%;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.45);
+  border: 2px solid #fff;
+  pointer-events: none;
+}
+#mcFire {
+  width: 90px; height: 90px;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Pixelify Sans', monospace;
+  font-size: 14px; letter-spacing: 1px; color: #fff;
+}
+#mcFire:active, #mcFire.active { background: rgba(255,255,255,0.28); }
+#mcReload {
+  width: 54px; height: 54px;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(128px, calc(env(safe-area-inset-bottom) + 110px));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: #ccc;
+}
+#mcWeapon {
+  width: 54px; height: 54px;
+  right: max(80px, calc(env(safe-area-inset-right) + 66px));
+  bottom: max(128px, calc(env(safe-area-inset-bottom) + 110px));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #ccc;
+}
+@media (pointer: fine) and (hover: hover) {
+  body:not(.force-mobile-controls) #mobileControls { display: none !important; }
+}
+/* Portrait: slightly larger sticks, tighter HUD */
+@media (orientation: portrait) and (max-width: 600px) {
+  #mcJoystick { width: 130px; height: 130px; }
+  #mcFire { width: 96px; height: 96px; }
+  #healthBarOuter { width: 140px; }
+  #hud { padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top)); }
+  .overlay h1 { font-size: 28px; }
+  .card-grid { max-height: 50vh; }
+  .shop-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  #mcJoystick { width: 100px; height: 100px; bottom: max(10px, env(safe-area-inset-bottom)); }
+  #mcKnob { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
+  #mcFire { width: 72px; height: 72px; }
+  #mcReload, #mcWeapon { width: 46px; height: 46px; bottom: max(90px, calc(env(safe-area-inset-bottom) + 78px)); }
+  #hud { padding: 6px 10px; }
+  #healthBarOuter { width: 120px; height: 10px; }
+}
+</style>
 </head>
 <body>
-    <div id="game">
-        <div class="start-screen" id="startScreen">
-            <h1>AIRSOFT DEFENSE</h1>
-            <p style="color: #fff; margin-bottom: 30px; font-size: 14px;">Defend the base!</p>
-            <button onclick="startGame()">START</button>
-        </div>
+<div id="game">
+  <canvas id="gameCanvas"></canvas>
 
-        <div class="score-board" id="scoreBoard" style="display: none;">
-            SCORE: <span id="score">0</span>
-        </div>
-
-        <div class="timer" id="timer" style="display: none;">
-            WAVE: <span id="wave">1</span>
-        </div>
-
-        <div class="ammo-display" id="ammoDisplay" style="display: none;">
-            AMMO: <span id="ammo">999</span>
-        </div>
-
-        <div class="health-bar" id="healthBar" style="display: none;">
-            <div class="health-fill" id="healthFill"></div>
-        </div>
-
-        <div id="gameArea"></div>
-
-        <div class="turret" id="turret">
-            <div class="turret-barrel" id="barrel"></div>
-            <div class="turret-body"></div>
-            <div class="turret-base"></div>
-        </div>
-
-        <div class="ground"></div>
-
-        <div class="end-screen" id="endScreen" style="display: none;">
-            <h1>GAME OVER!</h1>
-            <div class="final-score">YOUR SCORE: <span id="finalScore">0</span></div>
-            <div class="final-score">WAVES SURVIVED: <span id="finalWave">0</span></div>
-            <button onclick="location.reload()">PLAY AGAIN</button>
-        </div>
+  <div id="hud">
+    <div id="hudLeft">
+      <div id="hudWaveLine">WAVE <span id="hudWave">1</span> · <span id="hudEnemiesLeft">0</span> LEFT</div>
+      <div id="healthBarOuter"><div id="healthBarInner"></div></div>
+      <div id="weaponLabel"><span id="hudWeapon">PISTOL</span> · <span id="hudAmmo">∞</span></div>
+      <div id="ammoTicks"></div>
     </div>
+    <div id="hudRight">
+      <div class="hud-line">CREDITS <span id="hudCredits">0</span></div>
+      <div class="hud-line">KILLS <span id="hudKills">0</span></div>
+      <button id="pauseBtn">PAUSE</button>
+    </div>
+  </div>
 
-    <script>
-        let score = 0;
-        let wave = 1;
-        let health = 100;
-        let ammo = 999;
-        let gameActive = false;
-        let spawnInterval;
-        let enemiesInWave = 0;
-        let enemiesRemaining = 0;
-        let projectiles = [];
-        let enemies = [];
+  <div id="tutorialScreen" class="overlay">
+    <h2>HOW TO PLAY</h2>
+    <p class="sub" style="text-align:left; max-width:440px;">
+      <b>CONTROLS</b><br>
+      <b>WASD</b> — Move &nbsp;·&nbsp; <b>MOUSE</b> — Aim<br>
+      <b>CLICK / HOLD</b> — Fire &nbsp;·&nbsp; <b>R</b> — Reload<br>
+      <b>1–7</b> — Weapons &nbsp;·&nbsp; <b>ESC</b> — Pause
+    </p>
+    <p class="sub" style="text-align:left; max-width:440px;">
+      <b>COLLECTABLES</b><br>
+      Red cross — restore health<br>
+      Yellow ammo — refill current magazine
+    </p>
+    <p class="sub" style="text-align:left; max-width:440px;">
+      <b>UPGRADES &amp; SHOP</b><br>
+      Shop opens every 3 waves. Buy permanent upgrades, weapons, ammo &amp; boosts.<br>
+      Blue <b>HOLD POINT</b> (random waves) — stand inside for <b>x2 credits</b> on kills.
+    </p>
+    <div class="menu-btns">
+      <button id="btnTutorialClose">Close</button>
+    </div>
+  </div>
 
-        const gameArea = document.getElementById('gameArea');
-        const barrel = document.getElementById('barrel');
-        const turret = document.getElementById('turret');
+  <div id="titleScreen" class="overlay show">
+    <h1>ALPHA SHOOTER</h1>
+    <p class="sub">Patrol the woods. Enemies appear. Survive waves, buy weapons &amp; upgrades. Shop every 3 waves.</p>
+    <p class="stat-line">BEST WAVE <span id="titleBestWave">0</span> · CREDITS <span id="titleCredits">0</span></p>
+    <div class="menu-btns">
+      <button id="btnStart">Start Patrol</button>
+      <button id="btnTitleOptions" class="secondary">Options</button>
+    </div>
+  </div>
 
-        let mouseX = window.innerWidth / 2;
-        let mouseY = window.innerHeight / 2;
+  <div id="pauseScreen" class="overlay">
+    <h2>PAUSED</h2>
+    <div class="menu-btns">
+      <button id="btnResume">Resume</button>
+      <button id="btnPauseOptions" class="secondary">Options</button>
+      <button id="btnQuit" class="secondary">Quit to Title</button>
+    </div>
+  </div>
 
-        // Aim turret at mouse
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            
-            if (!gameActive) return;
-            
-            const turretRect = turret.getBoundingClientRect();
-            const turretCenterX = turretRect.left + turretRect.width / 2;
-            const turretCenterY = turretRect.top + 40;
-            
-            const angle = Math.atan2(e.clientY - turretCenterY, e.clientX - turretCenterX);
-            barrel.style.transform = `translateX(-50%) rotate(${angle + Math.PI/2}rad)`;
-        });
+  <div id="optionsScreen" class="overlay">
+    <h2>OPTIONS</h2>
+    <div class="opt-list">
+      <div class="opt-row">
+        <label>SFX</label>
+        <button type="button" class="opt-toggle" id="btnToggleSfx">ON</button>
+      </div>
+      <div class="opt-row">
+        <label>SFX VOL</label>
+        <input type="range" id="sfxVolSlider" min="0" max="100" value="70" />
+        <span class="opt-val" id="sfxVolLabel">70%</span>
+      </div>
+      <div class="opt-row">
+        <label>MUSIC</label>
+        <button type="button" class="opt-toggle" id="btnToggleMusic">ON</button>
+      </div>
+      <div class="opt-row">
+        <label>MUSIC VOL</label>
+        <input type="range" id="musicVolSlider" min="0" max="100" value="40" />
+        <span class="opt-val" id="musicVolLabel">40%</span>
+      </div>
+      <div class="opt-row">
+        <label>PARTICLES</label>
+        <button type="button" class="opt-toggle" id="btnToggleParticles">ON</button>
+      </div>
+      <hr class="opt-divider" />
+      <div class="opt-section">DEBUG</div>
+      <div class="opt-row">
+        <label>GOD MODE</label>
+        <button type="button" class="opt-toggle off" id="btnGodMode">OFF</button>
+      </div>
+      <div class="opt-row">
+        <label>INF AMMO</label>
+        <button type="button" class="opt-toggle off" id="btnInfAmmo">OFF</button>
+      </div>
+      <div class="opt-row">
+        <label>HITBOXES</label>
+        <button type="button" class="opt-toggle off" id="btnHitboxes">OFF</button>
+      </div>
+      <div class="opt-row">
+        <label>NO ENEMY FIRE</label>
+        <button type="button" class="opt-toggle off" id="btnNoEnemyFire">OFF</button>
+      </div>
+      <hr class="opt-divider" />
+      <div class="opt-row">
+        <label>PLAYER DATA</label>
+        <button type="button" class="opt-toggle" id="btnResetData" style="min-width:110px;color:#f88;border-color:#f88;">RESET</button>
+      </div>
+    </div>
+    <div class="menu-btns" style="margin-top:10px;">
+      <button id="btnOptionsBack" class="secondary">Back</button>
+    </div>
+  </div>
 
-        // Shoot projectile
-        document.addEventListener('click', (e) => {
-            if (!gameActive || ammo <= 0) return;
-            if (e.target.closest('button')) return;
-            
-            shoot(e.clientX, e.clientY);
-        });
+  <div id="upgradesScreen" class="overlay">
+    <h2>UPGRADES</h2>
+    <p class="stat-line">CREDITS <span id="upgCredits">0</span></p>
+    <p class="sub" style="margin:0;">Permanent upgrades. Spend credits earned from patrols.</p>
+    <div class="card-grid" id="upgradeGrid"></div>
+    <div class="menu-btns" style="margin-top:4px;">
+      <button id="btnUpgradesBack" class="secondary">Back</button>
+    </div>
+  </div>
 
-        function shoot(targetX, targetY) {
-            ammo--;
-            updateAmmo();
-            
-            const turretRect = turret.getBoundingClientRect();
-            const startX = turretRect.left + turretRect.width / 2;
-            const startY = turretRect.top + 10;
-            
-            const dx = targetX - startX;
-            const dy = targetY - startY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            projectiles.push({
-                x: startX,
-                y: startY,
-                vx: (dx / dist) * 15,
-                vy: (dy / dist) * 15,
-                element: createProjectile(startX, startY)
-            });
-        }
+  <div id="shopScreen" class="overlay">
+    <h2>SUPPLY DROP</h2>
+    <p class="stat-line">WAVE <span id="shopWave">0</span> COMPLETE · CREDITS <span id="shopCredits">0</span></p>
+    <p class="sub" style="margin:0;">Buy weapons, permanent upgrades, ammo &amp; boosts before the next wave.</p>
+    <div class="card-grid" id="shopGrid"></div>
+    <div class="menu-btns" style="margin-top:6px;">
+      <button id="btnShopContinue">Continue Patrol</button>
+    </div>
+  </div>
 
-        function createProjectile(x, y) {
-            const proj = document.createElement('div');
-            proj.className = 'projectile';
-            proj.style.left = x + 'px';
-            proj.style.top = y + 'px';
-            gameArea.appendChild(proj);
-            return proj;
-        }
+  <div id="endScreen" class="overlay">
+    <h1>KIA</h1>
+    <p class="stat-line">WAVE REACHED <span id="endWave">0</span> · SCORE <span id="endScore">0</span> · KILLS <span id="endKills">0</span></p>
+    <p class="stat-line">CREDITS EARNED +<span id="endCreditsEarned">0</span> · TOTAL <span id="endCreditsTotal">0</span></p>
+    <div class="menu-btns">
+      <button id="btnPlayAgain">Patrol Again</button>
+      <button id="btnEndTitle" class="secondary">Title</button>
+    </div>
+  </div>
 
-        function updateProjectiles() {
-            projectiles = projectiles.filter(proj => {
-                proj.x += proj.vx;
-                proj.y += proj.vy;
-                
-                proj.element.style.left = proj.x + 'px';
-                proj.element.style.top = proj.y + 'px';
-                
-                // Create trail
-                if (Math.random() > 0.5) {
-                    const trail = document.createElement('div');
-                    trail.className = 'trail';
-                    trail.style.left = proj.x + 'px';
-                    trail.style.top = proj.y + 'px';
-                    gameArea.appendChild(trail);
-                    setTimeout(() => trail.remove(), 300);
-                }
-                
-                // Check collision with enemies
-                let hit = false;
-                enemies.forEach((enemy, idx) => {
-                    if (hit) return;
-                    
-                    const dx = proj.x - (enemy.x + 15);
-                    const dy = proj.y - (enemy.y + 15);
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    
-                    if (dist < 20) {
-                        hit = true;
-                        
-                        score += 100;
-                        updateScore();
-                        
-                        createExplosion(enemy.x + 15, enemy.y + 15);
-                        showHitEffect(enemy.x + 15, enemy.y + 15, '+100');
-                        
-                        enemy.element.remove();
-                        enemies.splice(idx, 1);
-                        
-                        enemiesRemaining--;
-                        checkWaveComplete();
-                    }
-                });
-                
-                if (hit) {
-                    proj.element.remove();
-                    return false;
-                }
-                
-                // Remove if off screen
-                if (proj.x < 0 || proj.x > window.innerWidth || 
-                    proj.y < 0 || proj.y > window.innerHeight) {
-                    proj.element.remove();
-                    return false;
-                }
-                
-                return true;
-            });
-        }
+  <div id="toast"></div>
+</div>
 
-        function startGame() {
-            document.getElementById('startScreen').style.display = 'none';
-            document.getElementById('scoreBoard').style.display = 'block';
-            document.getElementById('timer').style.display = 'block';
-            document.getElementById('healthBar').style.display = 'block';
-            document.getElementById('ammoDisplay').style.display = 'block';
-            
-            score = 0;
-            wave = 1;
-            health = 100;
-            ammo = 999;
-            gameActive = true;
-            
-            updateScore();
-            updateWave();
-            updateHealth();
-            updateAmmo();
-            
-            startWave();
-            gameLoop();
-        }
+<div id="mobileControls" aria-hidden="true">
+  <div id="mcJoystick" class="mc-stick"><div id="mcKnob"></div></div>
+  <button type="button" id="mcFire" class="mc-btn">FIRE</button>
+  <button type="button" id="mcReload" class="mc-btn">R</button>
+  <button type="button" id="mcWeapon" class="mc-btn">GUN</button>
+</div>
 
-        function gameLoop() {
-            if (!gameActive) return;
-            
-            updateProjectiles();
-            updateEnemies();
-            
-            requestAnimationFrame(gameLoop);
-        }
-
-        function startWave() {
-            enemiesInWave = 8 + (wave - 1) * 4;
-            enemiesRemaining = enemiesInWave;
-            
-            let spawnDelay = Math.max(300, 1500 - (wave * 80));
-            let spawned = 0;
-            
-            spawnInterval = setInterval(() => {
-                if (!gameActive) {
-                    clearInterval(spawnInterval);
-                    return;
-                }
-                
-                spawnEnemy();
-                
-                spawned++;
-                if (spawned >= enemiesInWave) {
-                    clearInterval(spawnInterval);
-                }
-            }, spawnDelay);
-        }
-
-        function nextWave() {
-            wave++;
-            updateWave();
-            setTimeout(() => {
-                if (gameActive) startWave();
-            }, 2000);
-        }
-
-        function spawnEnemy() {
-            if (!gameActive) return;
-            
-            const x = Math.random() * (window.innerWidth - 40);
-            
-            const element = document.createElement('div');
-            element.className = 'enemy';
-            element.style.left = x + 'px';
-            element.style.top = '-40px';
-            element.innerHTML = `
-                <div class="enemy-head"></div>
-                <div class="enemy-sprite"></div>
-            `;
-            
-            gameArea.appendChild(element);
-            
-            enemies.push({
-                x: x,
-                y: -40,
-                speed: 1 + (wave * 0.15),
-                element: element
-            });
-        }
-
-        function updateEnemies() {
-            enemies = enemies.filter(enemy => {
-                enemy.y += enemy.speed;
-                enemy.element.style.top = enemy.y + 'px';
-                
-                // Check if hit ground
-                if (enemy.y >= window.innerHeight - 120) {
-                    enemy.element.remove();
-                    
-                    health -= 10;
-                    updateHealth();
-                    
-                    createExplosion(enemy.x + 15, enemy.y + 15);
-                    
-                    if (health <= 0) {
-                        endGame();
-                    }
-                    
-                    enemiesRemaining--;
-                    checkWaveComplete();
-                    
-                    return false;
-                }
-                
-                return true;
-            });
-        }
-
-        function checkWaveComplete() {
-            if (enemiesRemaining <= 0) {
-                nextWave();
-            }
-        }
-
-        function createExplosion(x, y) {
-            const explosion = document.createElement('div');
-            explosion.className = 'explosion';
-            explosion.style.left = (x - 20) + 'px';
-            explosion.style.top = (y - 20) + 'px';
-            gameArea.appendChild(explosion);
-            setTimeout(() => explosion.remove(), 400);
-        }
-
-        function showHitEffect(x, y, text) {
-            const hitEffect = document.createElement('div');
-            hitEffect.className = 'hit-effect';
-            hitEffect.textContent = text;
-            hitEffect.style.left = x + 'px';
-            hitEffect.style.top = y + 'px';
-            gameArea.appendChild(hitEffect);
-            
-            setTimeout(() => hitEffect.remove(), 600);
-        }
-
-        function updateScore() {
-            document.getElementById('score').textContent = score;
-        }
-
-        function updateWave() {
-            document.getElementById('wave').textContent = wave;
-        }
-
-        function updateHealth() {
-            if (health < 0) health = 0;
-            document.getElementById('healthFill').style.width = health + '%';
-        }
-
-        function updateAmmo() {
-            document.getElementById('ammo').textContent = ammo;
-        }
-
-        function endGame() {
-            gameActive = false;
-            clearInterval(spawnInterval);
-            
-            setTimeout(() => {
-                enemies.forEach(e => e.element.remove());
-                projectiles.forEach(p => p.element.remove());
-                enemies = [];
-                projectiles = [];
-                
-                document.getElementById('finalScore').textContent = score;
-                document.getElementById('finalWave').textContent = wave;
-                document.getElementById('endScreen').style.display = 'flex';
-            }, 1000);
-        }
-    </script>
+<script src="main.js"></script>
 </body>
 </html>
