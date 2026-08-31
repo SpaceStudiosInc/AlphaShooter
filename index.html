@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
+<meta name="screen-orientation" content="landscape">
 <title>ALPHA SHOOTER</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -285,9 +286,12 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
     <h2>HOW TO PLAY</h2>
     <p class="sub" style="text-align:left; max-width:440px;">
       <b>CONTROLS</b><br>
-      <b>WASD</b> — Move &nbsp;·&nbsp; <b>MOUSE</b> — Aim<br>
-      <b>CLICK / HOLD</b> — Fire &nbsp;·&nbsp; <b>R</b> — Reload<br>
-      <b>1–7</b> — Weapons &nbsp;·&nbsp; <b>ESC</b> — Pause
+      <span class="ctrl-desktop"><b>WASD</b> — Move · <b>MOUSE</b> — Aim<br>
+      <b>CLICK / HOLD</b> — Fire · <b>R</b> — Reload<br>
+      <b>1–7</b> — Weapons · <b>ESC</b> — Pause</span>
+      <span class="ctrl-mobile" style="display:none"><b>JOYSTICK</b> — Move · <b>TOUCH</b> — Aim<br>
+      <b>AUTO-FIRE</b> · <b>RELOAD</b> / <b>GUN</b> buttons<br>
+      Rotate phone to landscape</span>
     </p>
     <p class="sub" style="text-align:left; max-width:440px;">
       <b>COLLECTABLES</b><br>
@@ -412,8 +416,8 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
 
 <div id="mobileControls" aria-hidden="true">
   <div id="mcJoystick" class="mc-stick"><div id="mcKnob"></div></div>
-  <button type="button" id="mcFire" class="mc-btn">FIRE</button>
-  <button type="button" id="mcReload" class="mc-btn">R</button>
+  <button type="button" id="mcFire" class="mc-btn" style="display:none">AUTO</button>
+  <button type="button" id="mcReload" class="mc-btn">RELOAD</button>
   <button type="button" id="mcWeapon" class="mc-btn">GUN</button>
 </div>
 

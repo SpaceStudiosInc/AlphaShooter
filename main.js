@@ -707,8 +707,10 @@ function update(dt) {
   }
   fireCooldown -= dt;
   const w = currentWeapon();
+  // Mobile-only: auto-fire so player doesn't need to hold a button
+  if (isCoarsePointer() && mode === 'run') holdFire = true;
   if (holdFire && fireCooldown <= 0 && !isReloading) {
-    if (w.auto) firePlayer();
+    if (w.auto || isCoarsePointer()) firePlayer();
   }
 
   // player bullets (pass through trees)
@@ -1204,6 +1206,14 @@ function refreshMobileControls() {
   const on = isCoarsePointer() && document.body.classList.contains('in-run') &&
     (mode === 'run' || mode === 'paused' || mode === 'tutorial');
   document.body.classList.toggle('show-mobile-controls', on);
+  // Swap control hint text mobile vs desktop
+  document.querySelectorAll('.ctrl-desktop').forEach(el => { el.style.display = on || isCoarsePointer() ? 'none' : ''; });
+  document.querySelectorAll('.ctrl-mobile').forEach(el => { el.style.display = isCoarsePointer() ? '' : 'none'; });
+  try {
+    if (isCoarsePointer() && screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(() => {});
+    }
+  } catch (_) {}
 }
 
 function setupMobileControls() {
