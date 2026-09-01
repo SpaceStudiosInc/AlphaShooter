@@ -155,6 +155,7 @@ body.in-run #hud { display: flex; }
 }
 .card.maxed { border-color: #666; }
 .card.owned { border-color: #555; }
+.card.equipped { border-color: #6af; box-shadow: 0 0 8px rgba(100,180,255,0.35); }
 .card-name { font-size: 12px; letter-spacing: 1px; }
 .card-desc { font-size: 9px; color: #888; line-height: 1.3; flex: 1; }
 .card-level { font-size: 9px; color: #bbb; letter-spacing: 1px; }
@@ -218,26 +219,32 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
   border: 2px solid #fff;
   pointer-events: none;
 }
-#mcFire {
-  width: 90px; height: 90px;
+#mcAim {
+  width: 120px; height: 120px;
   right: max(14px, env(safe-area-inset-right));
-  bottom: max(24px, env(safe-area-inset-bottom));
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'Pixelify Sans', monospace;
-  font-size: 14px; letter-spacing: 1px; color: #fff;
+  bottom: max(18px, env(safe-area-inset-bottom));
 }
-#mcFire:active, #mcFire.active { background: rgba(255,255,255,0.28); }
+#mcAimKnob {
+  position: absolute;
+  width: 48px; height: 48px;
+  left: 50%; top: 50%;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgba(255,180,80,0.5);
+  border: 2px solid #ffa050;
+  pointer-events: none;
+}
 #mcReload {
   width: 54px; height: 54px;
   right: max(14px, env(safe-area-inset-right));
-  bottom: max(128px, calc(env(safe-area-inset-bottom) + 110px));
+  bottom: max(148px, calc(env(safe-area-inset-bottom) + 130px));
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px; color: #ccc;
+  font-size: 11px; color: #ccc;
 }
 #mcWeapon {
   width: 54px; height: 54px;
   right: max(80px, calc(env(safe-area-inset-right) + 66px));
-  bottom: max(128px, calc(env(safe-area-inset-bottom) + 110px));
+  bottom: max(148px, calc(env(safe-area-inset-bottom) + 130px));
   display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: #ccc;
 }
@@ -246,8 +253,7 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
 }
 /* Portrait: slightly larger sticks, tighter HUD */
 @media (orientation: portrait) and (max-width: 600px) {
-  #mcJoystick { width: 130px; height: 130px; }
-  #mcFire { width: 96px; height: 96px; }
+  #mcJoystick, #mcAim { width: 130px; height: 130px; }
   #healthBarOuter { width: 140px; }
   #hud { padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top)); }
   .overlay h1 { font-size: 28px; }
@@ -255,10 +261,9 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
   .shop-row { grid-template-columns: repeat(2, 1fr); }
 }
 @media (orientation: landscape) and (max-height: 480px) {
-  #mcJoystick { width: 100px; height: 100px; bottom: max(10px, env(safe-area-inset-bottom)); }
-  #mcKnob { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
-  #mcFire { width: 72px; height: 72px; }
-  #mcReload, #mcWeapon { width: 46px; height: 46px; bottom: max(90px, calc(env(safe-area-inset-bottom) + 78px)); }
+  #mcJoystick, #mcAim { width: 100px; height: 100px; bottom: max(10px, env(safe-area-inset-bottom)); }
+  #mcKnob, #mcAimKnob { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
+  #mcReload, #mcWeapon { width: 46px; height: 46px; bottom: max(118px, calc(env(safe-area-inset-bottom) + 100px)); }
   #hud { padding: 6px 10px; }
   #healthBarOuter { width: 120px; height: 10px; }
 }
@@ -289,7 +294,7 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
       <span class="ctrl-desktop"><b>WASD</b> — Move · <b>MOUSE</b> — Aim<br>
       <b>CLICK / HOLD</b> — Fire · <b>R</b> — Reload<br>
       <b>1–7</b> — Weapons · <b>ESC</b> — Pause</span>
-      <span class="ctrl-mobile" style="display:none"><b>JOYSTICK</b> — Move · <b>TOUCH</b> — Aim<br>
+      <span class="ctrl-mobile" style="display:none"><b>LEFT STICK</b> — Move · <b>RIGHT STICK</b> — Aim<br>
       <b>AUTO-FIRE</b> · <b>RELOAD</b> / <b>GUN</b> buttons<br>
       Rotate phone to landscape</span>
     </p>
@@ -353,27 +358,40 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
         <button type="button" class="opt-toggle" id="btnToggleParticles">ON</button>
       </div>
       <hr class="opt-divider" />
-      <div class="opt-section">DEBUG</div>
       <div class="opt-row">
-        <label>GOD MODE</label>
-        <button type="button" class="opt-toggle off" id="btnGodMode">OFF</button>
+        <label>DEBUG MODE</label>
+        <button type="button" class="opt-toggle off" id="btnDebugToggle">OFF</button>
       </div>
-      <div class="opt-row">
-        <label>INF AMMO</label>
-        <button type="button" class="opt-toggle off" id="btnInfAmmo">OFF</button>
-      </div>
-      <div class="opt-row">
-        <label>HITBOXES</label>
-        <button type="button" class="opt-toggle off" id="btnHitboxes">OFF</button>
-      </div>
-      <div class="opt-row">
-        <label>NO ENEMY FIRE</label>
-        <button type="button" class="opt-toggle off" id="btnNoEnemyFire">OFF</button>
-      </div>
-      <hr class="opt-divider" />
-      <div class="opt-row">
-        <label>PLAYER DATA</label>
-        <button type="button" class="opt-toggle" id="btnResetData" style="min-width:110px;color:#f88;border-color:#f88;">RESET</button>
+      <div id="debugOptions" style="display:none">
+        <div class="opt-section">DEBUG</div>
+        <div class="opt-row">
+          <label>GOD MODE</label>
+          <button type="button" class="opt-toggle off" id="btnGodMode">OFF</button>
+        </div>
+        <div class="opt-row">
+          <label>INF MAG</label>
+          <button type="button" class="opt-toggle off" id="btnInfAmmo">OFF</button>
+        </div>
+        <div class="opt-row">
+          <label>HITBOXES</label>
+          <button type="button" class="opt-toggle off" id="btnHitboxes">OFF</button>
+        </div>
+        <div class="opt-row">
+          <label>NO ENEMY FIRE</label>
+          <button type="button" class="opt-toggle off" id="btnNoEnemyFire">OFF</button>
+        </div>
+        <div class="opt-row">
+          <label>INF CREDITS</label>
+          <button type="button" class="opt-toggle" id="btnInfCredits" style="min-width:110px;">GRANT</button>
+        </div>
+        <div class="opt-row">
+          <label>ALL GUNS</label>
+          <button type="button" class="opt-toggle" id="btnGrantGuns" style="min-width:110px;">GRANT</button>
+        </div>
+        <div class="opt-row">
+          <label>PLAYER DATA</label>
+          <button type="button" class="opt-toggle" id="btnResetData" style="min-width:110px;color:#f88;border-color:#f88;">RESET</button>
+        </div>
       </div>
     </div>
     <div class="menu-btns" style="margin-top:10px;">
@@ -394,7 +412,7 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
   <div id="shopScreen" class="overlay">
     <h2>SUPPLY DROP</h2>
     <p class="stat-line">WAVE <span id="shopWave">0</span> COMPLETE · CREDITS <span id="shopCredits">0</span></p>
-    <p class="sub" style="margin:0;">Buy weapons, permanent upgrades, ammo &amp; boosts before the next wave.</p>
+    <p class="sub" style="margin:0;">Buy / equip weapons, upgrades &amp; boosts. Mag auto-refills on reload.</p>
     <div class="card-grid" id="shopGrid"></div>
     <div class="menu-btns" style="margin-top:6px;">
       <button id="btnShopContinue">Continue Patrol</button>
@@ -416,7 +434,7 @@ body.show-mobile-controls.in-run #mobileControls { display: block; }
 
 <div id="mobileControls" aria-hidden="true">
   <div id="mcJoystick" class="mc-stick"><div id="mcKnob"></div></div>
-  <button type="button" id="mcFire" class="mc-btn" style="display:none">AUTO</button>
+  <div id="mcAim" class="mc-stick"><div id="mcAimKnob"></div></div>
   <button type="button" id="mcReload" class="mc-btn">RELOAD</button>
   <button type="button" id="mcWeapon" class="mc-btn">GUN</button>
 </div>

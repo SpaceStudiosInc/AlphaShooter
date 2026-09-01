@@ -15,7 +15,7 @@ const WEAPONS = {
   },
   rifle: {
     id: 'rifle', name: 'RIFLE',
-    src: 'Assets/rifle.png', frames: 4, fw: 88, fh: 48,
+    src: 'Assets/rifle.png', frames: 3, fw: 88, fh: 48,
     dmg: 24, fireRate: 0.16, magazine: 22, reload: 1.3, speed: 700,
     spread: 0.035, pellets: 1, auto: true, cost: 80, unlockWave: 3,
   },
@@ -121,15 +121,15 @@ const ctx = canvas.getContext('2d');
 ctx.imageSmoothingEnabled = false;
 
 // Zoom: higher = more zoomed in (smaller world visible)
-let CAM_ZOOM = 1.85;
+let CAM_ZOOM = 1.55;
 
 function updateCamZoom() {
   const portrait = window.innerHeight > window.innerWidth;
   const shortSide = Math.min(window.innerWidth, window.innerHeight);
-  // Zoom out more on small / portrait screens so play area stays readable
-  if (shortSide < 500) CAM_ZOOM = portrait ? 1.35 : 1.55;
-  else if (shortSide < 800) CAM_ZOOM = portrait ? 1.55 : 1.75;
-  else CAM_ZOOM = 1.85;
+  // Zoomed out a bit more for readability
+  if (shortSide < 500) CAM_ZOOM = portrait ? 1.2 : 1.35;
+  else if (shortSide < 800) CAM_ZOOM = portrait ? 1.35 : 1.5;
+  else CAM_ZOOM = 1.55;
 }
 
 function resizeCanvas() {
@@ -178,7 +178,7 @@ let audioCtx = null;
 const sfxBuffers = {};
 const lastSfxTime = {};
 let activeGunSources = 0;
-const MAX_GUN_VOICES = 3;
+const MAX_GUN_VOICES = 12;
 
 function ensureAudioCtx() {
   if (!audioCtx) {
@@ -553,9 +553,9 @@ function firePlayer() {
   if (!save.settings.infAmmo) ammo[currentWeaponId]--;
   gunAnim = 0.1;
   fireCooldown = w.fireRate;
-  // throttle SFX hard — Web Audio + voice cap still need spacing on full-auto
-  const minInt = w.id === 'minigun' ? 90 : w.id === 'lmg' ? 70 : w.auto ? 45 : 0;
-  playSfx('rifle', w.id === 'minigun' ? 0.22 : w.id === 'lmg' ? 0.35 : w.id === 'pistol' ? 0.5 : 0.6, minInt);
+  // light SFX spacing so full-auto sounds continuous (not cut to 3 voices)
+  const minInt = w.id === 'minigun' ? 28 : w.id === 'lmg' ? 35 : w.auto ? 40 : 0;
+  playSfx('rifle', w.id === 'minigun' ? 0.28 : w.id === 'lmg' ? 0.4 : w.id === 'pistol' ? 0.55 : 0.65, minInt);
   if (!save.settings.infAmmo && ammo[currentWeaponId] <= 0) startReload();
 }
 
@@ -893,7 +893,8 @@ function render() {
         const sy2 = Math.floor(t / 2) * 16;
         const dx = Math.floor(tx * TILE);
         const dy = Math.floor(ty * TILE);
-        ctx.drawImage(IMG.tile, sx2, sy2, 16, 16, dx, dy, TILE + 1, TILE + 1);
+        // +2 overlap kills sub-pixel seams under zoom
+        ctx.drawImage(IMG.tile, sx2, sy2, 16, 16, dx, dy, TILE + 2, TILE + 2);
       }
     }
   } else {
@@ -1073,10 +1074,10 @@ function drawSoldier(x, y, angle, bodyImg, gunImg, gw, gh, frames, firing, bob, 
     ctx.rotate(angle);
     if (facingLeft) ctx.scale(1, -1);
     const frame = firing ? (1 + Math.floor((performance.now() / 45) % Math.max(1, frames - 1))) : 0;
-    const scale = isPlayer ? (gw <= 32 ? 1.15 : 0.85) : (gw <= 32 ? 0.9 : 0.65);
+    const scale = isPlayer ? (gw <= 32 ? 1.1 : 0.72) : (gw <= 32 ? 0.85 : 0.55);
     const dw = gw * scale, dh = gh * scale;
-    // Offset gun forward so it sits in front of body, not on face
-    const gunOff = isPlayer ? size * 0.38 : size * 0.22;
+    // Keep gun closer to body (long guns were floating too far)
+    const gunOff = isPlayer ? (gw <= 32 ? size * 0.28 : size * 0.12) : size * 0.15;
     ctx.drawImage(gunImg, frame * gw, 0, gw, gh, gunOff, -dh / 2, dw, dh);
     ctx.restore();
   }
@@ -1216,13 +1217,16 @@ function refreshMobileControls() {
   } catch (_) {}
 }
 
+const touchAim = { active: false, ax: 0, ay: 0 };
+
 function setupMobileControls() {
   const stick = document.getElementById('mcJoystick');
   const knob = document.getElementById('mcKnob');
-  const fireBtn = document.getElementById('mcFire');
+  const aimStick = document.getElementById('mcAim');
+  const aimKnob = document.getElementById('mcAimKnob');
   const reloadBtn = document.getElementById('mcReload');
   const weaponBtn = document.getElementById('mcWeapon');
-  if (!stick || !fireBtn) return;
+  if (!stick || !aimStick) return;
 
   const obs = new MutationObserver(refreshMobileControls);
   obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
@@ -1230,59 +1234,62 @@ function setupMobileControls() {
   window.addEventListener('orientationchange', () => setTimeout(refreshMobileControls, 150));
   refreshMobileControls();
 
-  let stickId = null;
-  function stickPos(clientX, clientY) {
-    const r = stick.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    let dx = clientX - cx, dy = clientY - cy;
-    const max = r.width * 0.38;
-    const len = Math.hypot(dx, dy) || 1;
-    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
-    if (knob) knob.style.transform = `translate(${dx}px, ${dy}px)`;
-    const ndx = dx / max, ndy = dy / max;
-    const dead = 0.18;
-    touchMove.mx = Math.abs(ndx) < dead ? 0 : ndx;
-    touchMove.my = Math.abs(ndy) < dead ? 0 : ndy;
+  function bindStick(el, knobEl, onMove, onEnd) {
+    let pid = null;
+    function pos(cx, cy) {
+      const r = el.getBoundingClientRect();
+      const ox = r.left + r.width / 2, oy = r.top + r.height / 2;
+      let dx = cx - ox, dy = cy - oy;
+      const max = r.width * 0.38;
+      const len = Math.hypot(dx, dy) || 1;
+      if (len > max) { dx = dx / len * max; dy = dy / len * max; }
+      if (knobEl) knobEl.style.transform = `translate(${dx}px, ${dy}px)`;
+      const ndx = dx / max, ndy = dy / max;
+      const dead = 0.18;
+      onMove(Math.abs(ndx) < dead ? 0 : ndx, Math.abs(ndy) < dead ? 0 : ndy);
+    }
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      pid = e.pointerId;
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
+      pos(e.clientX, e.clientY);
+    }, { passive: false });
+    el.addEventListener('pointermove', e => {
+      if (e.pointerId !== pid) return;
+      e.preventDefault();
+      pos(e.clientX, e.clientY);
+    }, { passive: false });
+    const end = e => {
+      if (e.pointerId !== pid) return;
+      pid = null;
+      if (knobEl) knobEl.style.transform = 'translate(0,0)';
+      onEnd();
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
   }
-  function stickEnd() {
-    stickId = null;
+
+  bindStick(stick, knob, (mx, my) => {
+    touchMove.active = true;
+    touchMove.mx = mx; touchMove.my = my;
+  }, () => {
     touchMove.active = false;
     touchMove.mx = 0; touchMove.my = 0;
-    if (knob) knob.style.transform = 'translate(0,0)';
-  }
-  stick.addEventListener('pointerdown', e => {
-    e.preventDefault(); e.stopPropagation();
-    stickId = e.pointerId;
-    touchMove.active = true;
-    try { stick.setPointerCapture(e.pointerId); } catch (_) {}
-    stickPos(e.clientX, e.clientY);
-  }, { passive: false });
-  stick.addEventListener('pointermove', e => {
-    if (e.pointerId !== stickId) return;
-    e.preventDefault();
-    stickPos(e.clientX, e.clientY);
-  }, { passive: false });
-  stick.addEventListener('pointerup', e => { if (e.pointerId === stickId) stickEnd(); });
-  stick.addEventListener('pointercancel', e => { if (e.pointerId === stickId) stickEnd(); });
+  });
 
-  function bindHold(btn, onDown, onUp) {
-    if (!btn) return;
-    btn.addEventListener('pointerdown', e => {
-      e.preventDefault(); e.stopPropagation();
-      try { btn.setPointerCapture(e.pointerId); } catch (_) {}
-      btn.classList.add('active');
-      onDown();
-    }, { passive: false });
-    const end = () => { btn.classList.remove('active'); onUp(); };
-    btn.addEventListener('pointerup', end);
-    btn.addEventListener('pointercancel', end);
-    btn.addEventListener('pointerleave', end);
-  }
-  bindHold(fireBtn, () => {
-    holdFire = true;
-    if (mode === 'run' && !currentWeapon().auto && fireCooldown <= 0) firePlayer();
-  }, () => { holdFire = false; });
+  bindStick(aimStick, aimKnob, (ax, ay) => {
+    touchAim.active = true;
+    touchAim.ax = ax; touchAim.ay = ay;
+    // map aim stick to screen-relative mouse so fire aims that direction
+    if (player) {
+      mouseX = canvas.width / 2 + ax * (canvas.width * 0.35);
+      mouseY = canvas.height / 2 + ay * (canvas.height * 0.35);
+    }
+  }, () => {
+    touchAim.active = false;
+    touchAim.ax = 0; touchAim.ay = 0;
+  });
+
   if (reloadBtn) {
     reloadBtn.addEventListener('pointerdown', e => {
       e.preventDefault(); e.stopPropagation();
@@ -1389,6 +1396,7 @@ function endRun() {
 }
 
 /* ── Options + Debug ────────────────────────────────────── */
+let debugPanelOpen = false;
 function refreshOptionsUI() {
   const s = save.settings;
   const setBtn = (id, on) => {
@@ -1404,6 +1412,9 @@ function refreshOptionsUI() {
   setBtn('btnInfAmmo', s.infAmmo);
   setBtn('btnHitboxes', s.showHitboxes);
   setBtn('btnNoEnemyFire', s.noEnemyFire);
+  setBtn('btnDebugToggle', debugPanelOpen);
+  const dbg = document.getElementById('debugOptions');
+  if (dbg) dbg.style.display = debugPanelOpen ? '' : 'none';
   document.getElementById('sfxVolSlider').value = s.sfxVol;
   document.getElementById('sfxVolLabel').textContent = s.sfxVol + '%';
   document.getElementById('musicVolSlider').value = s.musicVol;
@@ -1434,10 +1445,33 @@ document.getElementById('btnToggleMusic').addEventListener('click', () => {
   else if (mode === 'run' || mode === 'paused') startBgMusic();
 });
 document.getElementById('btnToggleParticles').addEventListener('click', () => toggleSetting('particles'));
+document.getElementById('btnDebugToggle').addEventListener('click', () => {
+  debugPanelOpen = !debugPanelOpen;
+  refreshOptionsUI();
+});
 document.getElementById('btnGodMode').addEventListener('click', () => toggleSetting('godMode'));
 document.getElementById('btnInfAmmo').addEventListener('click', () => toggleSetting('infAmmo'));
 document.getElementById('btnHitboxes').addEventListener('click', () => toggleSetting('showHitboxes'));
 document.getElementById('btnNoEnemyFire').addEventListener('click', () => toggleSetting('noEnemyFire'));
+document.getElementById('btnInfCredits').addEventListener('click', () => {
+  sessionCredits = (sessionCredits || 0) + 99999;
+  save.credits = (save.credits || 0) + 99999;
+  writeSave();
+  toast('+99999 CREDITS');
+  refreshTitle();
+  if (mode === 'shop') renderShop();
+});
+document.getElementById('btnGrantGuns').addEventListener('click', () => {
+  for (const id of Object.keys(WEAPONS)) {
+    if (!ownedWeapons.includes(id)) ownedWeapons.push(id);
+    if (!save.unlockedWeapons.includes(id)) save.unlockedWeapons.push(id);
+    ammo[id] = magCapacity(WEAPONS[id]);
+  }
+  writeSave();
+  toast('ALL GUNS UNLOCKED');
+  if (mode === 'shop') renderShop();
+  updateHud();
+});
 
 document.getElementById('sfxVolSlider').addEventListener('input', e => {
   save.settings.sfxVol = +e.target.value;
@@ -1461,17 +1495,16 @@ document.getElementById('btnResetData').addEventListener('click', () => {
 
 /* ── Wave shop ──────────────────────────────────────────── */
 const SHOP_ITEMS = [
-  { id: 'buy_rifle', name: 'RIFLE', desc: 'Unlock / equip Rifle', cost: 80, type: 'weapon', weapon: 'rifle' },
-  { id: 'buy_shotgun', name: 'SHOTGUN', desc: 'Unlock / equip Shotgun', cost: 120, type: 'weapon', weapon: 'shotgun' },
-  { id: 'buy_lmg', name: 'LMG', desc: 'Unlock / equip LMG', cost: 200, type: 'weapon', weapon: 'lmg' },
-  { id: 'buy_sniper', name: 'SNIPER', desc: 'Unlock / equip Sniper', cost: 250, type: 'weapon', weapon: 'sniper' },
-  { id: 'buy_minigun', name: 'MINIGUN', desc: 'Unlock / equip Minigun', cost: 400, type: 'weapon', weapon: 'minigun' },
-  { id: 'buy_rocket', name: 'ROCKET', desc: 'Unlock / equip Rocket Launcher', cost: 350, type: 'weapon', weapon: 'rocket' },
-  { id: 'refill_ammo', name: 'REFILL AMMO', desc: 'Full magazines for all owned weapons', cost: 25, type: 'ammo' },
+  { id: 'buy_rifle', name: 'RIFLE', desc: 'Unlock Rifle', cost: 80, type: 'weapon', weapon: 'rifle' },
+  { id: 'buy_shotgun', name: 'SHOTGUN', desc: 'Unlock Shotgun', cost: 120, type: 'weapon', weapon: 'shotgun' },
+  { id: 'buy_lmg', name: 'LMG', desc: 'Unlock LMG', cost: 200, type: 'weapon', weapon: 'lmg' },
+  { id: 'buy_sniper', name: 'SNIPER', desc: 'Unlock Sniper', cost: 250, type: 'weapon', weapon: 'sniper' },
+  { id: 'buy_minigun', name: 'MINIGUN', desc: 'Unlock Minigun', cost: 400, type: 'weapon', weapon: 'minigun' },
+  { id: 'buy_rocket', name: 'ROCKET', desc: 'Unlock Rocket', cost: 350, type: 'weapon', weapon: 'rocket' },
   { id: 'heal', name: 'MEDKIT', desc: 'Restore 40 HP', cost: 30, type: 'heal' },
-  { id: 'boost_dmg', name: 'DAMAGE BOOST', desc: '+35% damage for 30s', cost: 40, type: 'boost', key: 'dmg', dur: 30 },
-  { id: 'boost_spd', name: 'SPEED BOOST', desc: '+28% move speed for 25s', cost: 35, type: 'boost', key: 'speed', dur: 25 },
-  { id: 'boost_armor', name: 'ARMOR BOOST', desc: '+15% damage resist for 30s', cost: 40, type: 'boost', key: 'armor', dur: 30 },
+  { id: 'boost_dmg', name: 'DMG BOOST', desc: '+35% dmg 30s', cost: 40, type: 'boost', key: 'dmg', dur: 30 },
+  { id: 'boost_spd', name: 'SPD BOOST', desc: '+28% speed 25s', cost: 35, type: 'boost', key: 'speed', dur: 25 },
+  { id: 'boost_armor', name: 'ARMOR', desc: '+15% resist 30s', cost: 40, type: 'boost', key: 'armor', dur: 30 },
 ];
 
 function openShop() {
@@ -1562,53 +1595,75 @@ function renderShop() {
     rowCombat.appendChild(card);
   }
 
-  // GEAR — weapons + supplies
-  const rowGear = section('GEAR');
-  for (const item of SHOP_ITEMS) {
-    if (item.type === 'weapon' && wave < WEAPONS[item.weapon].unlockWave) continue;
-    const owned = item.type === 'weapon' && ownedWeapons.includes(item.weapon);
+  // WEAPONS — buy unlocks; equip is separate
+  const rowGuns = section('WEAPONS');
+  for (const item of SHOP_ITEMS.filter(i => i.type === 'weapon')) {
+    if (wave < WEAPONS[item.weapon].unlockWave) continue;
+    const owned = ownedWeapons.includes(item.weapon);
+    const equipped = currentWeaponId === item.weapon;
     const canAfford = sessionCredits >= item.cost;
     const card = document.createElement('div');
-    card.className = 'card' + (owned ? ' owned' : '');
+    card.className = 'card' + (owned ? ' owned' : '') + (equipped ? ' equipped' : '');
+    let btnLabel, btnDisabled;
+    if (!owned) {
+      btnLabel = item.cost;
+      btnDisabled = !canAfford;
+    } else if (equipped) {
+      btnLabel = 'EQUIPPED';
+      btnDisabled = true;
+    } else {
+      btnLabel = 'EQUIP';
+      btnDisabled = false;
+    }
     card.innerHTML = `
       <div class="card-name">${item.name}</div>
-      <div class="card-desc">${item.desc}</div>
-      <button class="card-buy" ${(!canAfford && !owned) || (item.type === 'weapon' && owned) ? 'disabled' : ''}>
-        ${owned ? 'OWNED' : item.cost}
-      </button>`;
+      <div class="card-desc">${owned ? (equipped ? 'Currently equipped' : 'Owned — equip to use') : item.desc}</div>
+      <button class="card-buy" ${btnDisabled ? 'disabled' : ''}>${btnLabel}</button>`;
     card.querySelector('.card-buy').addEventListener('click', () => {
-      if (item.type === 'weapon') {
-        if (ownedWeapons.includes(item.weapon)) return;
+      if (!owned) {
         if (sessionCredits < item.cost) return;
         sessionCredits -= item.cost;
         ownedWeapons.push(item.weapon);
         ammo[item.weapon] = magCapacity(WEAPONS[item.weapon]);
-        currentWeaponId = item.weapon;
         if (!save.unlockedWeapons.includes(item.weapon)) {
           save.unlockedWeapons.push(item.weapon);
           writeSave();
         }
         playSfx('pickup', 0.7, 0);
-        toast('ACQUIRED ' + item.name);
-      } else if (item.type === 'ammo') {
-        if (sessionCredits < item.cost) return;
-        sessionCredits -= item.cost;
-        for (const id of ownedWeapons) ammo[id] = magCapacity(WEAPONS[id]);
-        playSfx('pickup', 0.7, 0);
-        toast('AMMO REFILLED');
-      } else if (item.type === 'heal') {
-        if (sessionCredits < item.cost) return;
-        sessionCredits -= item.cost;
+        toast('UNLOCKED ' + item.name + ' — equip it');
+      } else if (!equipped) {
+        currentWeaponId = item.weapon;
+        isReloading = false;
+        playSfx('pickup', 0.5, 0);
+        toast('EQUIPPED ' + item.name);
+      }
+      renderShop();
+      updateHud();
+    });
+    rowGuns.appendChild(card);
+  }
+
+  // SUPPLIES
+  const rowGear = section('SUPPLIES');
+  for (const item of SHOP_ITEMS.filter(i => i.type !== 'weapon')) {
+    const canAfford = sessionCredits >= item.cost;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-name">${item.name}</div>
+      <div class="card-desc">${item.desc}</div>
+      <button class="card-buy" ${!canAfford ? 'disabled' : ''}>${item.cost}</button>`;
+    card.querySelector('.card-buy').addEventListener('click', () => {
+      if (sessionCredits < item.cost) return;
+      sessionCredits -= item.cost;
+      if (item.type === 'heal') {
         player.hp = Math.min(player.maxHp, player.hp + 40);
-        playSfx('pickup', 0.7, 0);
         toast('+40 HP');
       } else if (item.type === 'boost') {
-        if (sessionCredits < item.cost) return;
-        sessionCredits -= item.cost;
-        tempBoosts[item.key] = Math.max(tempBoosts[item.key], item.dur);
-        playSfx('pickup', 0.7, 0);
+        tempBoosts[item.key] = Math.max(tempBoosts[item.key] || 0, item.dur);
         toast(item.name + ' ACTIVE');
       }
+      playSfx('pickup', 0.7, 0);
       renderShop();
       updateHud();
     });
